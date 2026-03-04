@@ -1,0 +1,298 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  CREDIT_CARD
+  CASH
+  INVESTMENT
+  LOAN
+  MORTGAGE
+}
+
+enum TxStatus {
+  STAGED      // importato ma non confermato
+  CONFIRMED   // confermato dall’utente
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String?  @unique
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships WorkspaceMember[]
+  sessions    Session[]
+  accounts    Account[]
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members    WorkspaceMember[]
+  categories Category[]
+  accounts   Account[]
+  payees     Payee[]
+  rules      Rule[]
+  goals      Goal[]
+  recurring  RecurringItem[]
+  transactions Transaction[]
+  tags         Tag[]
+  importBatches ImportBatch[]
+  importRows    ImportRow[]
+  budgets       Budget[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        Role      @default(OWNER)
+  createdAt   DateTime  @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+}
+
+model Account {
+  id          String      @id @default(cuid())
+  workspaceId String
+  ownerUserId String?     // opzionale: per conti personali in workspace condiviso
+  name        String
+  type        AccountType
+  currency    String      @default("EUR")
+  openingBal  Decimal     @default(0.0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  owner       User?       @relation(fields: [ownerUserId], references: [id])
+
+  transactions Transaction[]
+  importBatches ImportBatch[]
+  rules         Rule[]
+  recurring     RecurringItem[]
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  parentId    String?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parent    Category? @relation("CategoryParent", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryParent")
+
+  transactions Transaction[]
+  rules        Rule[]
+  budgets      Budget[]
+  recurring    RecurringItem[]
+  splits       TransactionSplit[]
+}
+
+model Payee {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  normalized  String
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  rules        Rule[]
+
+  @@unique([workspaceId, normalized])
+}
+
+model Transaction {
+  id          String    @id @default(cuid())
+  workspaceId String
+  accountId   String
+  payeeId     String?
+  date        DateTime
+  amount      Decimal   // positivo = entrata, negativo = spesa
+  currency    String    @default("EUR")
+  description String
+  status      TxStatus  @default(STAGED)
+  isTransfer  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  account   Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  payee     Payee?    @relation(fields: [payeeId], references: [id])
+  category  Category? @relation(fields: [categoryId], references: [id])
+  categoryId String?
+
+  splits    TransactionSplit[]
+  tags      TransactionTag[]
+  imports   ImportRow[]
+
+  @@index([workspaceId, date])
+  @@index([workspaceId, accountId, date])
+}
+
+model TransactionSplit {
+  id            String      @id @default(cuid())
+  transactionId String
+  categoryId    String
+  amount        Decimal
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  category    Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([transactionId])
+}
+
+model Tag {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  txTags     TransactionTag[]
+
+  @@unique([workspaceId, name])
+}
+
+model TransactionTag {
+  id            String @id @default(cuid())
+  transactionId String
+  tagId         String
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  tag         Tag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([transactionId, tagId])
+}
+
+model Rule {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  priority    Int      @default(100)
+
+  // conditions (MVP)
+  contains    String?  // match on description/payee string
+  payeeId     String?
+  accountId   String?
+
+  // actions
+  setCategoryId String?
+  addTagName    String?
+  markTransfer  Boolean @default(false)
+
+  isEnabled   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  payee     Payee?    @relation(fields: [payeeId], references: [id])
+  account   Account?  @relation(fields: [accountId], references: [id])
+  category  Category? @relation(fields: [setCategoryId], references: [id])
+}
+
+model ImportBatch {
+  id          String   @id @default(cuid())
+  workspaceId String
+  accountId   String
+  sourceType  String   // "csv"
+  fileName    String
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  account   Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  rows      ImportRow[]
+}
+
+model ImportRow {
+  id            String   @id @default(cuid())
+  batchId       String
+  workspaceId   String
+  rawJson       Json
+  parsedDate    DateTime?
+  parsedAmount  Decimal?
+  parsedDesc    String?
+  dedupeKey     String?
+  transactionId String?
+  createdAt     DateTime @default(now())
+
+  batch       ImportBatch   @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  transaction Transaction?  @relation(fields: [transactionId], references: [id])
+}
+
+model Budget {
+  id          String   @id @default(cuid())
+  workspaceId String
+  categoryId  String
+  periodStart DateTime
+  periodEnd   DateTime
+  amount      Decimal
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  category  Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, periodStart, periodEnd])
+}
+
+model Goal {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  targetAmount Decimal
+  startDate   DateTime
+  endDate     DateTime
+  type        String   // "liquidity" | "investment" | "debt" | ...
+  priority    Int      @default(100)
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model RecurringItem {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  amount      Decimal
+  cadence     String   // "weekly"|"monthly"|"yearly"
+  nextDate    DateTime
+  categoryId  String?
+  accountId   String?
+  isIncome    Boolean  @default(false)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  category  Category?  @relation(fields: [categoryId], references: [id])
+  account   Account?   @relation(fields: [accountId], references: [id])
+}

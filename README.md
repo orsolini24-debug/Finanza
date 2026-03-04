@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Finance Tracker MVP
 
-## Getting Started
+Personal Finance Management app built with Next.js, Prisma, and Tailwind CSS.
 
-First, run the development server:
+## Features (MVP)
+- **Multi-tenant Workspaces**: Automatic personal workspace creation on first login.
+- **CSV Import Wizard**: Client-side parsing with column mapping and preview.
+- **Rules Engine**: Automated categorization based on transaction descriptions.
+- **Transactions Management**: Filtering, bulk editing, and staged/confirmed status.
+- **Mobile-friendly UI**: Modern dashboard and navigation.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Local Setup (Docker)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. **Install Dependencies**:
+   ```bash
+   pnpm install
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+2. **Start Local Database**:
+   ```bash
+   docker-compose up -d
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. **Setup Environment**:
+   - Copy `.env.local.example` to `.env.local`.
+   - Update `DATABASE_URL` if you changed the Docker defaults.
+   - Generate a `NEXTAUTH_SECRET` (see instructions in the file).
+   - Add your `GITHUB_ID` and `GITHUB_SECRET` (see "GitHub OAuth" below).
 
-## Learn More
+4. **Initialize Database**:
+   ```bash
+   npx prisma migrate dev --name init
+   npx prisma generate
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+5. **Start Development Server**:
+   ```bash
+   pnpm dev
+   ```
+   Open [http://localhost:3000](http://localhost:3000)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## GitHub OAuth Setup
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers).
+2. Create a "New OAuth App".
+3. **Application Name**: `Finance Tracker (Local)`
+4. **Homepage URL**: `http://localhost:3000`
+5. **Authorization callback URL**: `http://localhost:3000/api/auth/callback/github`
+6. Copy the **Client ID** and **Client Secret** to your `.env.local`.
 
-## Deploy on Vercel
+## Deploying to Vercel (Production)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Push your code to a GitHub repository.
+2. Connect the repository to Vercel.
+3. **Database**: Create a project on [Neon.tech](https://neon.tech) and copy the connection string.
+4. **GitHub OAuth**: Create a *separate* OAuth App on GitHub for production.
+   - **Homepage URL**: Your Vercel domain.
+   - **Authorization callback URL**: `https://YOUR_DOMAIN.vercel.app/api/auth/callback/github`
+5. **Environment Variables**: Add these in the Vercel Dashboard:
+   - `DATABASE_URL`: Your Neon connection string.
+   - `NEXTAUTH_URL`: Your production URL.
+   - `NEXTAUTH_SECRET`: A new random 32-char hash.
+   - `GITHUB_ID`: Production GitHub Client ID.
+   - `GITHUB_SECRET`: Production GitHub Client Secret.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project Structure
+- `src/app/app`: Main application routes (Dashboard, Transactions, etc.)
+- `src/app/auth`: Authentication pages.
+- `src/components`: UI components.
+- `src/lib`: Shared logic (Prisma, Rules Engine).
+- `prisma/schema.prisma`: Database model.

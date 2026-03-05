@@ -1,5 +1,6 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
 
 export const authOptions: NextAuthOptions = {
@@ -7,53 +8,42 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        login: { label: "Email o Username", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || credentials.password !== "password") {
-          return null;
-        }
+        if (!credentials?.login || !credentials?.password) return null;
 
-        // Find or create user
-        let user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+        const login = credentials.login.trim().toLowerCase();
+
+        // Cerca per email o username
+        const user = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { email: login },
+              { username: login },
+            ],
+          },
         });
 
-        if (!user) {
-          user = await prisma.user.create({
-            data: {
-              email: credentials.email,
-              name: credentials.email.split("@")[0],
-            },
-          });
+        if (!user) return null;
 
-          // Create default workspace for new user
-          await prisma.workspace.create({
-            data: {
-              name: "Personale",
-              members: {
-                create: {
-                  userId: user.id,
-                  role: "OWNER",
-                },
-              },
-              categories: {
-                create: [
-                  { name: "Spesa alimentare" },
-                  { name: "Casa" },
-                  { name: "Trasporti" },
-                  { name: "Svago" },
-                  { name: "Salute" },
-                  { name: "Stipendio" },
-                  { name: "Altro" },
-                ],
-              },
-            },
-          });
+        // Utente con password bcrypt
+        if (user.password) {
+          const valid = await bcrypt.compare(credentials.password, user.password);
+          if (!valid) return null;
+        } else {
+          // Backward compat: utenti vecchi senza password usano ADMIN_PASSWORD
+          const adminPassword = process.env.ADMIN_PASSWORD || "password";
+          if (credentials.password !== adminPassword) return null;
         }
 
-        return { id: user.id, email: user.email, name: user.name };
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          isOnboarded: user.isOnboarded,
+        };
       },
     }),
   ],
@@ -61,15 +51,21 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }: any) {
       if (user) {
         token.id = user.id;
+        token.isOnboarded = (user as any).isOnboarded;
+      }
+      // Handle session update (e.g., after completing onboarding)
+      if (trigger === "update" && session?.isOnboarded !== undefined) {
+        token.isOnboarded = session.isOnboarded;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.id;
+        (session.user as any).isOnboarded = token.isOnboarded;
       }
       return session;
     },

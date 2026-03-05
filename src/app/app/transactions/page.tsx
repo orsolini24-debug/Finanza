@@ -3,60 +3,71 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import TransactionsTable from "@/components/TransactionsTable";
-import { Search, Filter } from 'lucide-react'
+import { getCurrentMonth, getPeriodRange } from "@/lib/period";
+import { getSuggestedRules } from "@/app/actions/transactions";
+import RuleSuggestions from "@/components/transactions/RuleSuggestions";
 
-export default async function TransactionsPage() {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
-        redirect("/auth/signin");
-    }
+export default async function TransactionsPage({
+  searchParams
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) redirect("/auth/signin");
 
-    const userId = (session.user as any).id;
-    const workspace = await prisma.workspace.findFirst({
-        where: { members: { some: { userId } } },
-        include: { 
-            transactions: {
-                include: {
-                    category: true,
-                    account: true,
-                },
-                orderBy: {
-                    date: 'desc'
-                }
-            },
-            categories: true,
-        }
-    });
+  const resolvedSearchParams = await searchParams;
+  const month = (resolvedSearchParams.month as string) || getCurrentMonth();
+  const { start, end } = getPeriodRange(month);
 
-    if (!workspace) {
-        return <div className="p-8">Workspace not found.</div>;
-    }
-    
-    return (
-        <div className="p-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-                <h1 className="text-2xl font-bold">Transactions</h1>
-                
-                <div className="flex items-center gap-3">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <input 
-                    type="text" 
-                    placeholder="Search..." 
-                    className="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:border-gray-800"
-                    />
-                </div>
-                <button className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900 transition">
-                    <Filter className="w-4 h-4" />
-                    <span>Filter</span>
-                </button>
-                </div>
-            </div>
+  const userId = (session.user as any).id;
+  const workspace = await prisma.workspace.findFirst({
+    where: { members: { some: { userId } } },
+    include: {
+      accounts: { orderBy: { name: 'asc' } },
+      categories: { orderBy: { name: 'asc' } },
+      transactions: {
+        where: {
+          date: { gte: start, lte: end }
+        },
+        include: { category: true, account: true },
+        orderBy: { date: 'desc' },
+      },
+    },
+  });
 
-            <TransactionsTable 
-                transactions={workspace.transactions} 
-                categories={workspace.categories}
-            />
+  if (!workspace) return <div className="p-8">Workspace non trovato.</div>;
+
+  const suggestions = await getSuggestedRules(workspace.id);
+
+  // Serialize Decimal fields before passing to Client Components
+  const transactions = workspace.transactions.map(t => ({
+    ...t,
+    amount: Number(t.amount),
+    account: { ...t.account, openingBal: Number(t.account.openingBal) },
+  }));
+  const categories = workspace.categories.map(c => ({ ...c }));
+  const accounts = workspace.accounts.map(a => ({ ...a, openingBal: Number(a.openingBal) }));
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-700">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-display font-extrabold text-[var(--fg-primary)] tracking-tight">
+            Transazioni
+          </h1>
+          <p className="text-[var(--fg-muted)] mt-2 font-medium">
+            Movimenti registrati nel periodo selezionato.
+          </p>
         </div>
-    )
+      </div>
+
+      <RuleSuggestions suggestions={suggestions} />
+
+      <TransactionsTable
+        transactions={transactions as any}
+        categories={categories}
+        accounts={accounts as any}
+      />
+    </div>
+  );
 }

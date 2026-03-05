@@ -1,21 +1,29 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Sora, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const sora = Sora({
+  variable: "--font-sora",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "Finance Tracker",
-  description: "Personal Finance Management",
+  description: "Personal Finance Management Premium Dashboard",
 };
 
 export default function RootLayout({
@@ -24,9 +32,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.variable} ${sora.variable} ${jetbrainsMono.variable} antialiased`}
       >
         <Providers>{children}</Providers>
       </body>

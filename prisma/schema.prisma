@@ -3,9 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DATABASE_URL")
+  provider = "postgresql"
 }
 
 enum Role {
@@ -24,18 +22,27 @@ enum AccountType {
   MORTGAGE
 }
 
+enum CategoryType {
+  INCOME
+  EXPENSE
+  BOTH
+}
+
 enum TxStatus {
   STAGED      // importato ma non confermato
   CONFIRMED   // confermato dall’utente
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String?
-  email     String?  @unique
-  image     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String?
+  email       String?  @unique
+  username    String?  @unique
+  password    String?
+  isOnboarded Boolean  @default(false)
+  image       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   memberships WorkspaceMember[]
   sessions    Session[]
@@ -86,7 +93,7 @@ model WorkspaceMember {
 model Account {
   id          String      @id @default(cuid())
   workspaceId String
-  ownerUserId String?     // opzionale: per conti personali in workspace condiviso
+  ownerUserId String?     
   name        String
   type        AccountType
   currency    String      @default("EUR")
@@ -101,12 +108,14 @@ model Account {
   importBatches ImportBatch[]
   rules         Rule[]
   recurring     RecurringItem[]
+  goals         Goal[]
 }
 
 model Category {
   id          String   @id @default(cuid())
   workspaceId String
   name        String
+  type        CategoryType @default(BOTH)
   parentId    String?
   createdAt   DateTime @default(now())
 
@@ -141,7 +150,7 @@ model Transaction {
   accountId   String
   payeeId     String?
   date        DateTime
-  amount      Decimal   // positivo = entrata, negativo = spesa
+  amount      Decimal   
   currency    String    @default("EUR")
   description String
   status      TxStatus  @default(STAGED)
@@ -204,12 +213,10 @@ model Rule {
   name        String
   priority    Int      @default(100)
 
-  // conditions (MVP)
-  contains    String?  // match on description/payee string
+  contains    String?  
   payeeId     String?
   accountId   String?
 
-  // actions
   setCategoryId String?
   addTagName    String?
   markTransfer  Boolean @default(false)
@@ -227,7 +234,7 @@ model ImportBatch {
   id          String   @id @default(cuid())
   workspaceId String
   accountId   String
-  sourceType  String   // "csv"
+  sourceType  String   
   fileName    String
   createdAt   DateTime @default(now())
 
@@ -272,13 +279,16 @@ model Goal {
   workspaceId String
   name        String
   targetAmount Decimal
+  currentAmount Decimal @default(0.0)
   startDate   DateTime
   endDate     DateTime
-  type        String   // "liquidity" | "investment" | "debt" | ...
+  type        String   
   priority    Int      @default(100)
   createdAt   DateTime @default(now())
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  accountId   String?
+  account     Account?  @relation(fields: [accountId], references: [id])
 }
 
 model RecurringItem {
@@ -286,7 +296,7 @@ model RecurringItem {
   workspaceId String
   name        String
   amount      Decimal
-  cadence     String   // "weekly"|"monthly"|"yearly"
+  cadence     String   
   nextDate    DateTime
   categoryId  String?
   accountId   String?

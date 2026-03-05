@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Papa from 'papaparse'
-import { Upload, ChevronRight, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Upload, ChevronRight, CheckCircle2, AlertCircle, FileText, Database, ShieldCheck, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react'      
 import { processImport } from '@/app/actions/import'
+import { cn } from '@/lib/utils'
 
 type CSVRow = Record<string, string>
 
@@ -12,6 +13,13 @@ type Mapping = {
   amount: string
   description: string
   payee?: string
+}
+
+const FIELD_LABELS: Record<keyof Mapping, string> = {
+  date: 'Data',
+  amount: 'Importo',
+  description: 'Descrizione',
+  payee: 'Beneficiario'
 }
 
 export default function ImportPage() {
@@ -43,7 +51,7 @@ export default function ImportPage() {
     setMapping((prev) => ({ ...prev, [field]: value }))
   }
 
-  const isMappingValid = mapping.date && mapping.amount && mapping.description
+  const isMappingValid = mapping.date && mapping.amount && mapping.description      
 
   const handleConfirmMapping = () => {
     if (isMappingValid) setStep(3)
@@ -61,18 +69,30 @@ export default function ImportPage() {
       const result = await processImport(payload)
       setImportResult(result)
     } catch (e) {
-      console.error("Import failed", e)
-      alert("Import failed. Make sure you are logged in and try again.")
+      alert("Importazione fallita. Assicurati di aver effettuato l'accesso e riprova.")
     } finally {
       setIsImporting(false)
     }
   }
 
+  const resetImport = () => {
+    setFile(null)
+    setData([])
+    setHeaders([])
+    setMapping({ date: '', amount: '', description: '' })
+    setStep(1)
+    setImportResult(null)
+  }
+
   const renderStep1 = () => (
-    <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-xl bg-gray-50 dark:bg-gray-900 dark:border-gray-800">
-      <Upload className="w-12 h-12 text-gray-400 mb-4" />
-      <h3 className="text-lg font-semibold mb-2">Upload your bank statement</h3>
-      <p className="text-sm text-gray-500 mb-6">Drag and drop or click to browse CSV files</p>
+    <div className="flex flex-col items-center justify-center p-16 border-2 border-dashed border-[var(--accent)] bg-[var(--accent-dim)] rounded-[3rem] transition-all duration-300 hover:bg-[var(--accent)]/10 group cursor-pointer relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-[var(--accent)]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="p-6 bg-[var(--bg-surface)] rounded-3xl shadow-xl group-hover:scale-110 transition-transform duration-500 mb-6 z-10">
+        <Upload className="w-10 h-10 text-[var(--accent)]" />
+      </div>
+      <h3 className="text-2xl font-display font-bold text-[var(--fg-primary)] mb-2 z-10">Seleziona l'Estratto Conto</h3>    
+      <p className="text-[var(--fg-muted)] mb-8 font-medium z-10">Trascina il tuo file CSV qui o clicca per sfogliare</p>
+      
       <input
         type="file"
         accept=".csv"
@@ -82,41 +102,74 @@ export default function ImportPage() {
       />
       <label
         htmlFor="csv-upload"
-        className="bg-blue-600 text-white px-6 py-2 rounded-lg cursor-pointer hover:bg-blue-700 transition"
+        className="px-8 py-3 bg-[var(--accent)] text-[var(--accent-on)] font-bold rounded-2xl cursor-pointer hover:shadow-[0_0_20px_var(--glow-accent)] transition-all z-10 active:scale-95"
       >
-        Select File
+        Scegli File
       </label>
+      
+      <div className="mt-8 flex gap-6 z-10">
+        <div className="flex items-center gap-2 text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest">
+          <ShieldCheck size={14} className="text-[var(--income)]" />
+          SSL Sicuro
+        </div>
+        <div className="flex items-center gap-2 text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest">
+          <FileText size={14} />
+          Formato CSV
+        </div>
+      </div>
     </div>
   )
 
   const renderStep2 = () => (
-    <div className="space-y-6">
-      <h3 className="text-xl font-bold">Map your CSV columns</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {(['date', 'amount', 'description', 'payee'] as const).map((field) => (
-          <div key={field} className="flex flex-col gap-1">
-            <label className="text-sm font-medium capitalize">{field}*</label>
-            <select
-              className="p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
-              value={mapping[field] || ''}
-              onChange={(e) => handleMappingChange(field, e.target.value)}
-            >
-              <option value="">Select column...</option>
-              {headers.map((h) => (
-                <option key={h} value={h}>{h}</option>
-              ))}
-            </select>
+    <div className="space-y-8 animate-in slide-in-from-right-8 duration-500">
+      <div className="flex items-center gap-4 p-6 bg-[var(--bg-elevated)]/50 border border-[var(--border-subtle)] rounded-2xl">
+        <div className="p-3 bg-blue-500/10 rounded-xl">
+          <Database className="w-6 h-6 text-blue-400" />
+        </div>
+        <div>
+          <h3 className="font-bold text-[var(--fg-primary)]">Analisi Struttura Dati</h3>
+          <p className="text-xs text-[var(--fg-muted)] font-medium">Mappa le colonne del tuo CSV ai campi del nostro database.</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {(['date', 'amount', 'description', 'payee'] as const).map((field) => (     
+          <div key={field} className="space-y-2">
+            <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest ml-1">
+              {FIELD_LABELS[field]}{field !== 'payee' ? '*' : ' (opzionale)'}
+            </label>      
+            <div className="relative">
+              <select
+                className="w-full px-4 py-3 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--fg-primary)] font-medium appearance-none cursor-pointer"  
+                value={mapping[field] || ''}
+                onChange={(e) => handleMappingChange(field, e.target.value)}
+              >
+                <option value="">Seleziona colonna...</option>
+                {headers.map((h) => (
+                  <option key={h} value={h}>{h}</option>
+                ))}
+              </select>
+              <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--fg-subtle)] rotate-90 pointer-events-none" />
+            </div>
           </div>
         ))}
       </div>
-      <div className="flex justify-end gap-3 mt-8">
-        <button onClick={() => setStep(1)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Back</button>
+
+      <div className="flex justify-between items-center pt-8">
+        <button 
+          onClick={() => setStep(1)} 
+          className="flex items-center gap-2 px-6 py-3 text-[var(--fg-muted)] font-bold text-sm bg-[var(--bg-elevated)] hover:bg-[var(--bg-elevated)]/80 rounded-2xl transition-all"
+        >
+          <ArrowLeft size={16} />
+          Indietro
+        </button>
         <button
           disabled={!isMappingValid}
           onClick={handleConfirmMapping}
-          className="bg-blue-600 text-white px-6 py-2 rounded disabled:opacity-50"
+          className="flex items-center gap-2 px-8 py-3 bg-[var(--accent)] text-[var(--accent-on)] font-bold rounded-2xl disabled:opacity-50 hover:shadow-[0_0_20px_var(--glow-accent)] transition-all active:scale-95"  
         >
-          Next: Preview
+          Anteprima Dati
+          <ArrowRight size={16} />
         </button>
       </div>
     </div>
@@ -125,72 +178,138 @@ export default function ImportPage() {
   const renderStep3 = () => {
     const previewRows = data.slice(0, 10)
     return (
-      <div className="space-y-6">
-        <h3 className="text-xl font-bold">Preview your data</h3>
-        <div className="overflow-x-auto border rounded-lg">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50 dark:bg-gray-800">
-              <tr>
-                <th className="px-4 py-2 border-b">Date</th>
-                <th className="px-4 py-2 border-b">Amount</th>
-                <th className="px-4 py-2 border-b">Description</th>
-                <th className="px-4 py-2 border-b">Payee</th>
-              </tr>
-            </thead>
-            <tbody>
-              {previewRows.map((row, i) => (
-                <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-900 transition">
-                  <td className="px-4 py-2 border-b">{row[mapping.date]}</td>
-                  <td className="px-4 py-2 border-b font-mono">{row[mapping.amount]}</td>
-                  <td className="px-4 py-2 border-b text-sm max-w-xs truncate">{row[mapping.description]}</td>
-                  <td className="px-4 py-2 border-b">{mapping.payee ? row[mapping.payee] : '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="space-y-8 animate-in slide-in-from-right-8 duration-500">
+        <div className="flex items-center gap-4 p-6 bg-[var(--bg-elevated)]/50 border border-[var(--border-subtle)] rounded-2xl">
+          <div className="p-3 bg-blue-500/10 rounded-xl">
+            <CheckCircle2 className="w-6 h-6 text-blue-400" />
+          </div>
+          <div>
+            <h3 className="font-bold text-[var(--fg-primary)]">Verifica Finale</h3>
+            <p className="text-xs text-[var(--fg-muted)] font-medium">Controlla le prime 10 righe prima dell'importazione definitiva.</p>
+          </div>
         </div>
-        <div className="flex justify-end gap-3 mt-8">
-          <button onClick={() => setStep(2)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded" disabled={isImporting}>Back</button>
+
+        <div className="glass rounded-3xl overflow-hidden border border-[var(--border-subtle)]">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-[var(--bg-elevated)] border-b border-[var(--border-subtle)]">
+                  <th className="px-6 py-4 text-[10px] font-bold text-[var(--fg-muted)] uppercase tracking-widest">Data</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-[var(--fg-muted)] uppercase tracking-widest">Importo</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-[var(--fg-muted)] uppercase tracking-widest">Descrizione</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-[var(--fg-muted)] uppercase tracking-widest">Beneficiario</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border-subtle)]">
+                {previewRows.map((row, i) => (
+                  <tr key={i} className="hover:bg-[var(--bg-elevated)]/50 transition-colors">
+                    <td className="px-6 py-4 text-sm font-medium text-[var(--fg-muted)]">{row[mapping.date]}</td>       
+                    <td className="px-6 py-4 text-base font-mono font-bold tracking-tighter text-[var(--fg-primary)]">
+                      {Number(row[mapping.amount]) >= 0 ? '+' : ''}{row[mapping.amount]}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-bold text-[var(--fg-primary)] max-w-xs truncate">{row[mapping.description]}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-[var(--fg-subtle)]">{mapping.payee ? row[mapping.payee] : '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center pt-8">
           <button 
+            onClick={() => setStep(2)} 
+            className="flex items-center gap-2 px-6 py-3 text-[var(--fg-muted)] font-bold text-sm bg-[var(--bg-elevated)] hover:bg-[var(--bg-elevated)]/80 rounded-2xl transition-all" 
+            disabled={isImporting}
+          >
+            <ArrowLeft size={16} />
+            Indietro
+          </button>
+          <button
             onClick={handleImport}
             disabled={isImporting}
-            className="bg-green-600 text-white px-6 py-2 rounded font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-10 py-4 bg-[var(--accent)] text-[var(--accent-on)] font-extrabold text-sm rounded-2xl hover:shadow-[0_0_30px_var(--glow-accent)] transition-all active:scale-95 disabled:opacity-50"
           >
-            {isImporting ? `Importing...` : `Import ${data.length} Transactions`}
+            {isImporting ? (
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                Elaborazione...
+              </>
+            ) : (
+              <>
+                Conferma Importazione {data.length} Transazioni
+                <CheckCircle2 size={18} />
+              </>
+            )}
           </button>
         </div>
       </div>
     )
   }
-  
+
   const renderResult = () => (
-    <div className="text-center p-12">
-        <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold mb-2">Import Successful</h2>
-        <p className="text-gray-600 dark:text-gray-400">
-            {importResult?.importedCount} transactions were imported.
-        </p>
-        <p className="text-gray-500 text-sm">
-            {importResult?.duplicateCount} duplicates were skipped.
-        </p>
-        <button onClick={() => window.location.reload()} className="mt-8 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
-            Import Another File
-        </button>
+    <div className="text-center p-16 animate-in zoom-in-95 duration-700">
+        <div className="w-24 h-24 bg-[var(--income-dim)] rounded-full flex items-center justify-center mx-auto mb-8 shadow-[0_0_40px_rgba(16,217,160,0.2)]">
+            <CheckCircle2 className="w-12 h-12 text-[var(--income)]" />
+        </div>
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-black text-[var(--fg-primary)] mb-4 tracking-tight">Importazione Riuscita</h2>
+        <div className="max-w-xs mx-auto space-y-2 mb-10">
+          <div className="flex justify-between p-3 bg-[var(--bg-elevated)] rounded-xl border border-[var(--border-subtle)]">
+            <span className="text-[10px] font-bold text-[var(--fg-muted)] uppercase">Importate</span>
+            <span className="font-mono font-bold text-[var(--income)]">{importResult?.importedCount}</span>
+          </div>
+          <div className="flex justify-between p-3 bg-[var(--bg-elevated)] rounded-xl border border-[var(--border-subtle)]">
+            <span className="text-[10px] font-bold text-[var(--fg-muted)] uppercase">Duplicati Saltati</span>
+            <span className="font-mono font-bold text-[var(--warning)]">{importResult?.duplicateCount}</span>
+          </div>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <button 
+            onClick={resetImport} 
+            className="px-8 py-3 bg-[var(--bg-elevated)] text-[var(--fg-primary)] font-bold rounded-2xl hover:bg-[var(--bg-elevated)]/80 transition-all border border-[var(--border-subtle)]"
+          >
+            Importa un altro
+          </button>
+          <a 
+            href="/app/dashboard" 
+            className="px-8 py-3 bg-[var(--accent)] text-[var(--accent-on)] font-bold rounded-2xl hover:shadow-[0_0_20px_var(--glow-accent)] transition-all flex items-center justify-center gap-2"
+          >
+            Vai alla Dashboard
+            <ArrowRight size={18} />
+          </a>
+        </div>
     </div>
   )
 
   return (
-    <div className="max-w-5xl mx-auto p-8">
-      <div className="flex items-center gap-4 mb-8">
-        <div className={`flex items-center justify-center w-8 h-8 rounded-full ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>1</div>
-        <div className="h-px w-8 bg-gray-200" />
-        <div className={`flex items-center justify-center w-8 h-8 rounded-full ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>2</div>
-        <div className="h-px w-8 bg-gray-200" />
-        <div className={`flex items-center justify-center w-8 h-8 rounded-full ${step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>3</div>
-        <h1 className="text-2xl font-bold ml-4">CSV Import Wizard</h1>
+    <div className="max-w-4xl mx-auto space-y-10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+        <div>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-display font-extrabold text-[var(--fg-primary)] tracking-tight">Wizard CSV</h1>
+          <p className="text-[var(--fg-muted)] mt-2 font-medium">Trasforma i tuoi estratti conto in dati strutturati.</p>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {[1, 2, 3].map((s) => (
+            <div key={s} className="flex items-center">
+              <div className={cn(
+                "flex items-center justify-center w-10 h-10 rounded-2xl font-bold transition-all duration-500",
+                step === s 
+                  ? "bg-[var(--accent)] text-[var(--accent-on)] shadow-[0_0_15px_var(--glow-accent)] scale-110" 
+                  : step > s 
+                    ? "bg-[var(--income-dim)] text-[var(--income)]" 
+                    : "bg-[var(--bg-elevated)] text-[var(--fg-subtle)]"
+              )}>
+                {step > s ? <CheckCircle2 size={18} /> : s}
+              </div>
+              {s < 3 && <div className={cn("h-0.5 w-6 mx-2 rounded-full", step > s ? "bg-[var(--income)]" : "bg-[var(--border-subtle)]")} />}
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-950 p-6 rounded-xl border shadow-sm">
+      <div className="glass bg-[var(--bg-surface)]/50 p-10 rounded-[3rem] border border-[var(--border-default)] shadow-2xl min-h-[400px] flex flex-col justify-center">   
         {importResult?.success ? renderResult() : (
             <>
                 {step === 1 && renderStep1()}

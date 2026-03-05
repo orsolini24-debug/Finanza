@@ -1,26 +1,20 @@
 import { PrismaClient } from '@prisma/client'
+import { PrismaNeon } from '@prisma/adapter-neon'
 
-const prismaClientSingleton = () => {
-  if (!process.env.DATABASE_URL) {
-    console.warn("DATABASE_URL is not set. Database operations will fail.")
-    // We return a proxy that throws on any access to avoid hard crashes during SSR
-    return new Proxy({} as PrismaClient, {
-      get: (target, prop) => {
-        if (prop === '$on' || prop === '$connect' || prop === '$disconnect') return () => {}
-        throw new Error(`Prisma access failed: DATABASE_URL is missing. Check .env.local`)
-      }
-    })
+function createPrismaClient() {
+  const connectionString = process.env.DATABASE_URL
+  if (!connectionString) {
+    throw new Error('DATABASE_URL environment variable is not set')
   }
-  return new PrismaClient({
-    datasourceUrl: process.env.DATABASE_URL,
-  })
+  const adapter = new PrismaNeon({ connectionString })
+  return new PrismaClient({ adapter })
 }
 
 declare global {
-  var prisma: undefined | ReturnType<typeof prismaClientSingleton>
+  var prisma: undefined | ReturnType<typeof createPrismaClient>
 }
 
-const prisma = globalThis.prisma ?? prismaClientSingleton()
+const prisma = globalThis.prisma ?? createPrismaClient()
 
 export default prisma
 

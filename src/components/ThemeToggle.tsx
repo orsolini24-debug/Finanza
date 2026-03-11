@@ -5,89 +5,49 @@ import { createPortal } from 'react-dom'
 import { Palette, Check, Moon, Sun, MonitorSmartphone } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type Theme = 'obsidian' | 'sapphire' | 'auto' | 'evergreen' | 'aurora' | 'cloud'
+type BaseTheme = 'obsidian' | 'sapphire' | 'aurora' | 'sunset' | 'forest' | 'rosegold' | 'cyberpunk' | 'cloud' | 'ocean' | 'mono'
+type Variant = 'dark' | 'light'
+type ThemeState = BaseTheme | 'auto'
 
 // Compatibilità con vecchi ID salvati in localStorage
-const LEGACY_MAP: Record<string, Theme> = {
-  dark: 'obsidian',
-  'midnight-neon': 'sapphire',
-  'zen-garden': 'evergreen',
-  cyberpunk: 'aurora',
-  'ocean-blue': 'obsidian',
-  light: 'cloud',
+const LEGACY_MAP: Record<string, string> = {
+  'dark': 'obsidian-dark',
+  'light': 'cloud-light',
+  'midnight-neon': 'sapphire-dark',
+  'zen-garden': 'forest-dark',
+  'cyberpunk': 'cyberpunk-dark',
+  'ocean-blue': 'ocean-dark',
+  'obsidian': 'obsidian-dark',
+  'sapphire': 'sapphire-dark',
+  'aurora': 'aurora-dark',
+  'cloud': 'cloud-light',
+  'evergreen': 'forest-dark',
 }
 
-interface ThemeDef {
-  id: Theme
+interface BaseThemeDef {
+  id: BaseTheme
   label: string
-  desc: string
-  preview: React.ReactNode
-  icon?: React.ReactNode
+  color: string // Per il preview dot
 }
 
-const THEMES: ThemeDef[] = [
-  {
-    id: 'obsidian',
-    label: 'Obsidian',
-    desc: 'Nero OLED · Teal',
-    preview: (
-      <div className="w-5 h-5 rounded-full bg-[#0D1117] border border-[#1DB9A6]/40 shadow-[0_0_6px_rgba(29,185,166,0.4)]" />
-    ),
-  },
-  {
-    id: 'sapphire',
-    label: 'Midnight Sapphire',
-    desc: 'Navy · Electric Blue',
-    preview: (
-      <div className="w-5 h-5 rounded-full bg-[#070D1A] border border-[#3B8BF5]/40 shadow-[0_0_6px_rgba(59,139,245,0.4)]" />
-    ),
-  },
-  {
-    id: 'auto',
-    label: 'Auto',
-    desc: 'Segue il sistema',
-    icon: <MonitorSmartphone size={14} />,
-    preview: (
-      <div className="w-5 h-5 rounded-full overflow-hidden border border-white/20 flex">
-        <div className="w-1/2 bg-[#F7F5F2]" />
-        <div className="w-1/2 bg-[#0D1117]" />
-      </div>
-    ),
-  },
-  {
-    id: 'evergreen',
-    label: 'Evergreen',
-    desc: 'Foresta · Terra',
-    preview: (
-      <div className="w-5 h-5 rounded-full bg-[#111810] border border-[#7BA05B]/40 shadow-[0_0_6px_rgba(123,160,91,0.35)]" />
-    ),
-  },
-  {
-    id: 'aurora',
-    label: 'Aurora',
-    desc: 'Borealis · Gradient',
-    preview: (
-      <div
-        className="w-5 h-5 rounded-full border border-white/10"
-        style={{
-          background: 'linear-gradient(135deg, #2DD4BF 0%, #3B82F6 50%, #8B5CF6 100%)',
-          boxShadow: '0 0 8px rgba(45,212,191,0.5)',
-        }}
-      />
-    ),
-  },
-  {
-    id: 'cloud',
-    label: 'Cloud Dancer',
-    desc: 'Pantone 2026 · Light',
-    preview: (
-      <div className="w-5 h-5 rounded-full bg-[#F7F5F2] border border-[#1D4ED8]/30 shadow-[0_0_6px_rgba(29,78,216,0.2)]" />
-    ),
-  },
+const BASE_THEMES: BaseThemeDef[] = [
+  { id: 'obsidian',  label: 'Obsidian',  color: '#1DB9A6' },
+  { id: 'sapphire',  label: 'Sapphire',  color: '#3B8BF5' },
+  { id: 'aurora',    label: 'Aurora',    color: '#2DD4BF' },
+  { id: 'sunset',    label: 'Sunset',    color: '#F97316' },
+  { id: 'forest',    label: 'Forest',    color: '#7BA05B' },
+  { id: 'rosegold',  label: 'Rose Gold', color: '#E879A0' },
+  { id: 'cyberpunk', label: 'Cyberpunk', color: '#F032E6' },
+  { id: 'cloud',     label: 'Cloud',     color: '#1D4ED8' },
+  { id: 'ocean',     label: 'Ocean',     color: '#00BCD4' },
+  { id: 'mono',      label: 'Mono',      color: '#ADADAD' },
 ]
 
 export default function ThemeToggle() {
-  const [theme, setTheme]     = useState<Theme>('obsidian')
+  const [baseTheme, setBaseTheme] = useState<BaseTheme>('obsidian')
+  const [variant, setVariant]     = useState<Variant>('dark')
+  const [isAuto, setIsAuto]       = useState(false)
+  
   const [open, setOpen]       = useState(false)
   const [pos, setPos]         = useState({ top: 0, right: 0 })
   const [mounted, setMounted] = useState(false)
@@ -95,12 +55,23 @@ export default function ThemeToggle() {
 
   useEffect(() => {
     setMounted(true)
-    const raw = localStorage.getItem('theme') ?? ''
-    const resolved = (LEGACY_MAP[raw] ?? raw) as Theme
-    const valid = THEMES.find(t => t.id === resolved)
-    const initial = valid ? resolved : 'obsidian'
-    setTheme(initial)
-    document.documentElement.setAttribute('data-theme', initial)
+    const raw = localStorage.getItem('theme') ?? 'obsidian-dark'
+    const resolved = LEGACY_MAP[raw] ?? raw
+    
+    if (resolved === 'auto') {
+      setIsAuto(true)
+      document.documentElement.setAttribute('data-theme', 'auto')
+    } else {
+      const [b, v] = resolved.split('-') as [BaseTheme, Variant]
+      if (BASE_THEMES.find(t => t.id === b)) {
+        setBaseTheme(b)
+        setVariant(v || 'dark')
+        document.documentElement.setAttribute('data-theme', resolved)
+      } else {
+        // Fallback
+        document.documentElement.setAttribute('data-theme', 'obsidian-dark')
+      }
+    }
   }, [])
 
   const handleOpen = () => {
@@ -111,81 +82,101 @@ export default function ThemeToggle() {
     setOpen(prev => !prev)
   }
 
-  const applyTheme = (id: Theme) => {
-    setTheme(id)
-    document.documentElement.setAttribute('data-theme', id)
-    localStorage.setItem('theme', id)
-    setOpen(false)
+  const applyTheme = (b: BaseTheme, v: Variant, auto: boolean) => {
+    setIsAuto(auto)
+    if (!auto) {
+      setBaseTheme(b)
+      setVariant(v)
+      const id = `${b}-${v}`
+      document.documentElement.setAttribute('data-theme', id)
+      localStorage.setItem('theme', id)
+    } else {
+      document.documentElement.setAttribute('data-theme', 'auto')
+      localStorage.setItem('theme', 'auto')
+    }
   }
 
-  const current = THEMES.find(t => t.id === theme) ?? THEMES[0]
-
-  // Icona dinamica per il bottone: sole (cloud/auto-light), luna (dark), palette (altri)
-  const ButtonIcon = () => {
-    if (theme === 'cloud') return <Sun size={17} />
-    if (theme === 'auto')  return <MonitorSmartphone size={17} />
-    return <Palette size={17} />
+  const toggleVariant = () => {
+    const newVariant = variant === 'dark' ? 'light' : 'dark'
+    setVariant(newVariant)
+    if (!isAuto) {
+      const id = `${baseTheme}-${newVariant}`
+      document.documentElement.setAttribute('data-theme', id)
+      localStorage.setItem('theme', id)
+    }
   }
+
+  const currentLabel = isAuto ? 'Auto' : BASE_THEMES.find(t => t.id === baseTheme)?.label
 
   const dropdown = (
     <>
       <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
       <div
-        className="fixed z-[9999] w-56 rounded-2xl shadow-2xl overflow-hidden"
+        className="fixed z-[9999] w-64 rounded-[2rem] shadow-2xl overflow-hidden glass p-4"
         style={{ top: pos.top, right: pos.right, background: 'var(--bg-surface)', border: '1px solid var(--border-default)' }}
       >
-        {/* Header */}
-        <div className="px-3 pt-3 pb-2 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
-          <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: 'var(--fg-subtle)' }}>
-            Tema Interfaccia
-          </p>
-        </div>
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--fg-subtle)] mb-4 px-2">
+          Tema Interfaccia
+        </p>
 
-        {/* Lista temi */}
-        <div className="p-1.5 grid grid-cols-1 gap-0.5">
-          {THEMES.map((t) => (
+        {/* Grid Temi */}
+        <div className="grid grid-cols-5 gap-2 mb-6">
+          {BASE_THEMES.map((t) => (
             <button
               key={t.id}
-              onClick={() => applyTheme(t.id)}
+              onClick={() => applyTheme(t.id, variant, false)}
               className={cn(
-                "flex items-center gap-3 w-full px-2.5 py-2 rounded-xl transition-all text-left group",
-                theme === t.id
-                  ? "bg-[var(--accent-dim)]"
-                  : "hover:bg-[var(--bg-elevated)]"
+                "group flex flex-col items-center gap-1.5 p-1 rounded-xl transition-all",
+                !isAuto && baseTheme === t.id ? "bg-[var(--accent-dim)]" : "hover:bg-[var(--bg-elevated)]"
               )}
+              title={t.label}
             >
-              {/* Preview colore */}
-              <div className="shrink-0">{t.preview}</div>
-
-              {/* Testo */}
-              <div className="flex-1 min-w-0">
-                <p
-                  className="text-[12px] font-bold leading-tight truncate"
-                  style={{ color: theme === t.id ? 'var(--accent)' : 'var(--fg-primary)' }}
-                >
-                  {t.label}
-                </p>
-                <p className="text-[10px] leading-tight mt-0.5 truncate" style={{ color: 'var(--fg-subtle)' }}>
-                  {t.desc}
-                </p>
-              </div>
-
-              {/* Check attivo */}
-              {theme === t.id && (
-                <Check size={13} style={{ color: 'var(--accent)' }} className="shrink-0" />
-              )}
+              <div 
+                className="w-6 h-6 rounded-full border-2 transition-transform group-hover:scale-110" 
+                style={{ 
+                  backgroundColor: t.color,
+                  borderColor: !isAuto && baseTheme === t.id ? 'var(--accent)' : 'transparent'
+                }}
+              />
+              <span className="text-[8px] font-bold uppercase truncate w-full text-center opacity-60">
+                {t.id.slice(0, 3)}
+              </span>
             </button>
           ))}
         </div>
 
-        {/* Footer info Auto */}
-        {theme === 'auto' && (
-          <div className="px-3 py-2 border-t" style={{ borderColor: 'var(--border-subtle)', background: 'var(--bg-elevated)' }}>
-            <p className="text-[9px]" style={{ color: 'var(--fg-subtle)' }}>
-              Si adatta automaticamente alle preferenze di sistema (chiaro/scuro)
-            </p>
-          </div>
-        )}
+        {/* Toggle Dark/Light */}
+        <div className="flex gap-2 mb-2">
+          <button
+            onClick={() => { if(isAuto) setIsAuto(false); toggleVariant(); }}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border transition-all text-[10px] font-black uppercase tracking-widest",
+              !isAuto && variant === 'light' ? "bg-white text-black border-white shadow-lg" : "bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--fg-muted)]"
+            )}
+          >
+            <Sun size={14} /> Chiaro
+          </button>
+          <button
+            onClick={() => { if(isAuto) setIsAuto(false); toggleVariant(); }}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border transition-all text-[10px] font-black uppercase tracking-widest",
+              !isAuto && variant === 'dark' ? "bg-black text-white border-black shadow-lg" : "bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--fg-muted)]"
+            )}
+          >
+            <Moon size={14} /> Scuro
+          </button>
+        </div>
+
+        {/* Auto Mode */}
+        <button
+          onClick={() => applyTheme(baseTheme, variant, true)}
+          className={cn(
+            "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border transition-all text-[10px] font-black uppercase tracking-widest mt-2",
+            isAuto ? "bg-[var(--accent)] text-[var(--accent-on)] border-[var(--accent)] shadow-lg" : "bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--fg-muted)]"
+          )}
+        >
+          <MonitorSmartphone size={14} /> Auto (Sistema)
+        </button>
       </div>
     </>
   )
@@ -195,17 +186,24 @@ export default function ThemeToggle() {
       <button
         ref={buttonRef}
         onClick={handleOpen}
-        className="p-2 rounded-xl border transition-all flex items-center gap-2"
+        className="p-2 sm:px-3 sm:py-2 rounded-xl border transition-all flex items-center gap-2 group hover:shadow-lg"
         style={{
           background: 'var(--bg-elevated)',
           borderColor: open ? 'var(--accent)' : 'var(--border-subtle)',
           color: open ? 'var(--accent)' : 'var(--fg-muted)',
         }}
-        title="Cambia tema"
       >
-        <ButtonIcon />
-        <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">
-          {current.label}
+        <div className="relative">
+          {isAuto ? <MonitorSmartphone size={16} /> : variant === 'light' ? <Sun size={16} /> : <Moon size={16} />}
+          {!isAuto && (
+            <div 
+              className="absolute -top-1 -right-1 w-2 h-2 rounded-full border border-[var(--bg-elevated)]"
+              style={{ backgroundColor: BASE_THEMES.find(t => t.id === baseTheme)?.color }}
+            />
+          )}
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline group-hover:text-[var(--fg-primary)] transition-colors">
+          {currentLabel}
         </span>
       </button>
 

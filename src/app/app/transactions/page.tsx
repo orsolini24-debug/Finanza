@@ -48,6 +48,9 @@ export default async function TransactionsPage({
   const categories = workspace.categories.map(c => ({ ...c }));
   const accounts = workspace.accounts.map(a => ({ ...a, openingBal: Number(a.openingBal) }));
 
+  const stagedCount = transactions.filter(t => t.status === 'STAGED').length;
+  const defaultStatus = stagedCount > 0 ? 'STAGED' : 'ALL';
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -56,7 +59,9 @@ export default async function TransactionsPage({
             Transazioni
           </h1>
           <p className="text-[var(--fg-muted)] mt-2 font-medium">
-            Movimenti registrati nel periodo selezionato.
+            {stagedCount > 0
+              ? `${stagedCount} moviment${stagedCount === 1 ? 'o' : 'i'} da confermare · ${transactions.length - stagedCount} registrat${transactions.length - stagedCount === 1 ? 'o' : 'i'} nel periodo`
+              : 'Movimenti registrati nel periodo selezionato.'}
           </p>
         </div>
       </div>
@@ -67,6 +72,7 @@ export default async function TransactionsPage({
         transactions={transactions as any}
         categories={categories}
         accounts={accounts as any}
+        defaultStatus={defaultStatus as any}
       />
     </div>
   );

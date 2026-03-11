@@ -2,8 +2,9 @@
 
 import { useState, useTransition, useMemo, useEffect } from 'react'
 import { Transaction, Category, Account, TxStatus } from '@prisma/client'
-import { Search, Filter, Check, X, Trash2, Tags, ChevronDown, CheckCircle2, AlertCircle, Edit2, Loader2, Download } from 'lucide-react'
+import { Search, Filter, Check, X, Trash2, Tags, ChevronDown, CheckCircle2, AlertCircle, Edit2, Loader2, Download, Sparkles, Clock } from 'lucide-react'
 import { confirmTransactions, deleteTransactions, setTransactionCategory } from '@/app/actions/transactions'
+import { aiSuggestCategories } from '@/app/actions/ai-categorize'
 import { useRouter } from 'next/navigation'
 import { cn, formatCurrency } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -18,18 +19,26 @@ interface TransactionsTableProps {
   transactions: TransactionWithRelations[];
   categories: Category[];
   accounts: Account[];
+  defaultStatus?: 'ALL' | 'STAGED' | 'CONFIRMED';
 }
 
-export default function TransactionsTable({ transactions, categories, accounts }: TransactionsTableProps) {
+export default function TransactionsTable({ transactions, categories, accounts, defaultStatus = 'ALL' }: TransactionsTableProps) {
   const [selectedTx, setSelectedTx] = useState<string[]>([])
   const [editingTx, setEditingTx] = useState<TransactionWithRelations | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [isAiLoading, setIsAiLoading] = useState(false)
+  const [aiSuggestions, setAiSuggestions] = useState<{ transactionId: string; categoryId: string | null; categoryName: string | null; confidence: number; accepted: boolean }[]>([])
+  const [showAiPanel, setShowAiPanel] = useState(false)
   const router = useRouter()
+
+  // Tabs
+  const stagedCount    = transactions.filter(t => t.status === 'STAGED').length
+  const confirmedCount = transactions.filter(t => t.status === 'CONFIRMED').length
 
   // Filters
   const [search, setSearch] = useState('')
   const [showFilter, setShowFilter] = useState(false)
-  const [filterStatus, setFilterStatus] = useState<'ALL' | 'STAGED' | 'CONFIRMED'>('ALL')
+  const [filterStatus, setFilterStatus] = useState<'ALL' | 'STAGED' | 'CONFIRMED'>(defaultStatus)
   const [filterType, setFilterType] = useState<'ALL' | 'income' | 'expense'>('ALL')
   const [filterCategoryId, setFilterCategoryId] = useState<string>('ALL')
 
@@ -122,6 +131,64 @@ export default function TransactionsTable({ transactions, categories, accounts }
     })
   }
 
+  const handleAiCategorize = async () => {
+    if (isAiLoading || isPending) return
+    
+    // Se non ci sono selezionati, prendi tutti i filtrati che sono STAGED
+    const idsToProcess = selectedTx.length > 0 ? selectedTx : filtered.filter(t => t.status === 'STAGED').map(t => t.id)
+    
+    if (idsToProcess.length === 0) {
+      alert("Nessuna transazione in attesa da categorizzare.")
+      return
+    }
+
+    if (idsToProcess.length > 20) {
+      alert("Seleziona massimo 20 transazioni alla volta per la categorizzazione AI.")
+      return
+    }
+
+    setIsAiLoading(true)
+    try {
+      const suggestions = await aiSuggestCategories(idsToProcess)
+      setAiSuggestions(suggestions.map(s => ({ ...s, accepted: s.confidence >= 0.7 })))
+      setShowAiPanel(true)
+    } catch (e: any) {
+      alert(e.message)
+    } finally {
+      setIsAiLoading(false)
+    }
+  }
+
+  const handleAcceptAiSuggestions = () => {
+    const toApply = aiSuggestions.filter(s => s.accepted && s.categoryId)
+    if (toApply.length === 0) {
+      setShowAiPanel(false)
+      return
+    }
+
+    startTransition(async () => {
+      try {
+        // Raggruppa per categoria per fare meno chiamate
+        const byCategory = toApply.reduce((acc, s) => {
+          if (!acc[s.categoryId!]) acc[s.categoryId!] = []
+          acc[s.categoryId!].push(s.transactionId)
+          return acc
+        }, {} as Record<string, string[]>)
+
+        for (const [catId, ids] of Object.entries(byCategory)) {
+          await setTransactionCategory(ids, catId)
+        }
+        
+        setShowAiPanel(false)
+        setAiSuggestions([])
+        setSelectedTx([])
+        router.refresh()
+      } catch (e: any) {
+        alert(e.message)
+      }
+    })
+  }
+
   const activeFiltersCount = [filterStatus !== 'ALL', filterType !== 'ALL', filterCategoryId !== 'ALL'].filter(Boolean).length
 
   const exportToCSV = () => {
@@ -148,6 +215,57 @@ export default function TransactionsTable({ transactions, categories, accounts }
 
   return (
     <div className="space-y-6 pb-24">
+
+      {/* Tab STAGED / CONFIRMED */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="flex gap-1 p-1 rounded-2xl" style={{ background: 'var(--bg-elevated)' }}>
+          {([
+            { id: 'ALL'       as const, label: 'Tutte',          count: transactions.length, icon: undefined as any },
+            { id: 'STAGED'    as const, label: 'Da confermare',  count: stagedCount,         icon: Clock },
+            { id: 'CONFIRMED' as const, label: 'Registrate',     count: confirmedCount,      icon: CheckCircle2 },
+          ]).map(({ id, label, count, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => { setFilterStatus(id); setSelectedTx([]) }}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all",
+                filterStatus === id ? "shadow-sm" : "hover:bg-[var(--bg-surface)]"
+              )}
+              style={{
+                background: filterStatus === id ? 'var(--bg-surface)' : 'transparent',
+                color: filterStatus === id
+                  ? id === 'STAGED' ? 'var(--warning)' : id === 'CONFIRMED' ? 'var(--income)' : 'var(--fg-primary)'
+                  : 'var(--fg-muted)',
+              }}
+            >
+              {Icon && <Icon size={12} />}
+              {label}
+              {count > 0 && (
+                <span className={cn(
+                  "px-1.5 py-0.5 rounded-full text-[9px] font-black",
+                  filterStatus === id
+                    ? id === 'STAGED' ? "bg-[var(--warning-dim)] text-[var(--warning)]"
+                    : id === 'CONFIRMED' ? "bg-[var(--income-dim)] text-[var(--income)]"
+                    : "bg-[var(--accent-dim)] text-[var(--accent)]"
+                    : "bg-[var(--border-subtle)] text-[var(--fg-subtle)]"
+                )}>
+                  {count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Banner informativo STAGED */}
+        {filterStatus === 'STAGED' && stagedCount > 0 && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium"
+            style={{ background: 'var(--warning-dim)', color: 'var(--warning)' }}>
+            <AlertCircle size={13} />
+            {stagedCount} transazion{stagedCount === 1 ? 'e' : 'i'} in attesa di conferma — selezionale e usa "Conferma"
+          </div>
+        )}
+      </div>
+
       {/* Toolbar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
@@ -246,6 +364,86 @@ export default function TransactionsTable({ transactions, categories, accounts }
               >
                 Resetta Filtri
               </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* AI Suggestion Panel */}
+      <AnimatePresence>
+        {showAiPanel && aiSuggestions.length > 0 && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="mb-6 overflow-hidden"
+          >
+            <div className="glass p-6 rounded-[2rem] border border-[var(--border-accent)]/30 bg-[var(--bg-elevated)]/50">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-[var(--accent)] text-[var(--accent-on)] rounded-xl shadow-lg shadow-[var(--glow-accent)]">
+                    <Sparkles size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-[var(--fg-primary)] uppercase tracking-widest">Suggerimenti AI Groq</h3>
+                    <p className="text-[10px] text-[var(--fg-muted)] font-medium">L'intelligenza artificiale ha analizzato {aiSuggestions.length} movimenti</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowAiPanel(false)} className="p-2 text-[var(--fg-muted)] hover:text-[var(--fg-primary)] transition-all">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                {aiSuggestions.map((s, idx) => {
+                  const tx = transactions.find(t => t.id === s.transactionId)
+                  return (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-[var(--bg-surface)]/50 rounded-2xl border border-[var(--border-subtle)] hover:border-[var(--accent)]/20 transition-all group">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <input 
+                          type="checkbox" 
+                          checked={s.accepted} 
+                          onChange={() => setAiSuggestions(prev => prev.map((p, i) => i === idx ? { ...p, accepted: !p.accepted } : p))}
+                          className="w-4 h-4 rounded-md border-[var(--border-strong)] bg-transparent text-[var(--accent)] focus:ring-[var(--accent-dim)] accent-[var(--accent)] cursor-pointer"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-[var(--fg-primary)] truncate">{tx?.description}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-[var(--fg-muted)] font-medium">{formatCurrency(tx ? Number(tx.amount) : 0)}</span>
+                            <span className="text-[10px] text-[var(--accent)] font-black uppercase tracking-tighter">
+                              → {s.categoryName || 'Incertezza'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className={cn(
+                        "text-[10px] font-black px-2 py-1 rounded-lg border",
+                        s.confidence >= 0.8 ? "bg-[var(--income-dim)] text-[var(--income)] border-[var(--income)]/20" :
+                        s.confidence >= 0.5 ? "bg-[var(--warning-dim)] text-[var(--warning)] border-[var(--warning)]/20" :
+                        "bg-[var(--expense-dim)] text-[var(--expense)] border-[var(--expense)]/20"
+                      )}>
+                        {Math.round(s.confidence * 100)}%
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="mt-6 flex items-center gap-3">
+                <button
+                  onClick={handleAcceptAiSuggestions}
+                  disabled={isPending}
+                  className="flex-1 py-3 bg-[var(--accent)] text-[var(--accent-on)] rounded-xl font-bold text-xs uppercase tracking-widest hover:shadow-[0_10px_25px_var(--glow-accent)] transition-all active:scale-[0.98] disabled:opacity-50"
+                >
+                  {isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : `Applica ${aiSuggestions.filter(s => s.accepted).length} suggerimenti`}
+                </button>
+                <button
+                  onClick={() => setAiSuggestions(prev => prev.map(p => ({ ...p, accepted: true })))}
+                  className="px-4 py-3 bg-[var(--bg-elevated)] text-[var(--fg-muted)] rounded-xl font-bold text-[10px] uppercase tracking-widest hover:text-[var(--fg-primary)] transition-all"
+                >
+                  Seleziona tutti
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
@@ -380,6 +578,15 @@ export default function TransactionsTable({ transactions, categories, accounts }
               </div>
 
               <div className="flex items-center gap-1.5 sm:gap-2">
+                <button 
+                  onClick={handleAiCategorize} 
+                  disabled={isAiLoading || isPending} 
+                  className="flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-elevated)] text-[var(--accent)] border border-[var(--accent)]/30 rounded-xl hover:bg-[var(--accent)] hover:text-[var(--accent-on)] transition-all duration-300 font-bold text-xs disabled:opacity-50"
+                >
+                  {isAiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  <span className="hidden sm:inline">AI Categorizza</span>
+                </button>
+
                 <div className="relative group">
                   <Tags className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--accent)] w-3.5 h-3.5 pointer-events-none" />
                   <select

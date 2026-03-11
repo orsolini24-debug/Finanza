@@ -48,13 +48,24 @@ function parseAmount(raw: string): number {
     // US/ISO: 1,234.56 → rimuovi virgole migliaia
     s = s.replace(/,/g, '')
   } else {
-    // Solo virgola senza punto: potrebbe essere separatore decimale
+    // Solo virgola senza punto: separatore decimale
     s = s.replace(',', '.')
   }
 
   const n = parseFloat(s)
   if (isNaN(n)) throw new Error(`Importo non riconosciuto: "${raw}"`)
   return n
+}
+
+// ── Converte stringa raw in PaymentMethod enum (o null) ─────────
+const VALID_PM = new Set<string>([
+  'CASH', 'DEBIT_CARD', 'CREDIT_CARD', 'BANK_TRANSFER',
+  'PAYPAL', 'CRYPTO', 'DIRECT_DEBIT', 'CHECK', 'OTHER',
+])
+function toPaymentMethod(raw?: string): PaymentMethod | null {
+  if (!raw) return null
+  const upper = raw.trim().toUpperCase().replace(/[\s\-]+/g, '_')
+  return VALID_PM.has(upper) ? (upper as PaymentMethod) : null
 }
 
 // ── Action: prende i conti del workspace ────────────────────────
@@ -68,6 +79,62 @@ export async function getAccountsForImport() {
   return accounts
 }
 
+// ── Action: storico import ──────────────────────────────────────
+export async function getImportHistory() {
+  const { workspace } = await getWorkspaceForUser()
+  const batches = await prisma.importBatch.findMany({
+    where: { workspaceId: workspace.id },
+    include: {
+      account: { select: { name: true } },
+      _count:  { select: { rows: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+  })
+  return batches.map(b => ({
+    id:          b.id,
+    fileName:    b.fileName,
+    sourceType:  b.sourceType,
+    accountName: b.account.name,
+    rowCount:    b._count.rows,
+    createdAt:   b.createdAt.toISOString(),
+  }))
+}
+
+// ── Action: elimina batch import (+ transazioni associate STAGED) ─
+export async function deleteImportBatch(batchId: string) {
+  const { workspace } = await getWorkspaceForUser()
+
+  // Verifica ownership
+  const batch = await prisma.importBatch.findFirst({
+    where: { id: batchId, workspaceId: workspace.id },
+    include: { rows: { select: { transactionId: true } } },
+  })
+  if (!batch) throw new Error('Import non trovato o non autorizzato.')
+
+  const txIds = batch.rows
+    .map(r => r.transactionId)
+    .filter((id): id is string => id !== null)
+
+  // Elimina tag e split delle transazioni (no cascaded transactions)
+  if (txIds.length > 0) {
+    await prisma.transactionTag.deleteMany({ where: { transactionId: { in: txIds } } })
+    await prisma.transactionSplit.deleteMany({ where: { transactionId: { in: txIds } } })
+    // Elimina solo le transazioni ancora STAGED (quelle confermate restano)
+    await prisma.transaction.deleteMany({
+      where: { id: { in: txIds }, status: 'STAGED', workspaceId: workspace.id },
+    })
+  }
+
+  // Le ImportRow vengono eliminate in cascade dal batch
+  await prisma.importBatch.delete({ where: { id: batchId } })
+
+  revalidatePath('/app/import')
+  revalidatePath('/app/transactions')
+  revalidatePath('/app/dashboard')
+  return { success: true }
+}
+
 // ── Action: import CSV ──────────────────────────────────────────
 export async function processImport(data: {
   date: string
@@ -77,12 +144,11 @@ export async function processImport(data: {
   paymentMethod?: string
 }[], options: {
   accountId: string
-  paymentMethod?: string
+  paymentMethod?: string   // fallback globale (opzionale)
   fileName?: string
 }) {
   const { workspace } = await getWorkspaceForUser()
 
-  // Verifica che il conto appartenga al workspace
   const account = await prisma.account.findFirst({
     where: { id: options.accountId, workspaceId: workspace.id },
   })
@@ -101,7 +167,7 @@ export async function processImport(data: {
   let duplicateCount = 0
   const errors: string[] = []
 
-  const defaultPm = (options.paymentMethod ?? null) as PaymentMethod | null
+  const defaultPm = toPaymentMethod(options.paymentMethod)
 
   for (let i = 0; i < data.length; i++) {
     const row = data[i]
@@ -118,6 +184,9 @@ export async function processImport(data: {
       })
       if (existing) { duplicateCount++; continue }
 
+      // Metodo pagamento: per-riga dal CSV, altrimenti fallback globale
+      const rowPm = toPaymentMethod(row.paymentMethod) ?? defaultPm
+
       const tx = await prisma.transaction.create({
         data: {
           workspaceId:   workspace.id,
@@ -126,18 +195,18 @@ export async function processImport(data: {
           amount,
           description,
           status:        'STAGED',
-          paymentMethod: defaultPm,
+          paymentMethod: rowPm,
         }
       })
 
       await prisma.importRow.create({
         data: {
-          batchId:      batch.id,
-          workspaceId:  workspace.id,
-          rawJson:      row as any,
-          parsedDate:   date,
-          parsedAmount: amount,
-          parsedDesc:   description,
+          batchId:       batch.id,
+          workspaceId:   workspace.id,
+          rawJson:       row as any,
+          parsedDate:    date,
+          parsedAmount:  amount,
+          parsedDesc:    description,
           transactionId: tx.id,
         }
       })
@@ -151,6 +220,7 @@ export async function processImport(data: {
   revalidatePath('/app/dashboard')
   revalidatePath('/app/transactions')
   revalidatePath('/app/accounts')
+  revalidatePath('/app/import')
 
-  return { success: true, importedCount, duplicateCount, errors }
+  return { success: true, importedCount, duplicateCount, errors, batchId: batch.id }
 }

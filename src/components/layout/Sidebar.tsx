@@ -97,13 +97,13 @@ export default function Sidebar() {
                 )}>
                   <Icon size={18} strokeWidth={isActive ? 2.5 : 2} className={cn("transition-transform", isActive ? "scale-100" : "group-hover:scale-110")} />
                 </div>
-                <span className={cn("text-[13px] font-black tracking-tight transition-colors", isActive ? "text-[var(--fg-primary)]" : "text-[var(--fg-muted)] group-hover:text-[var(--fg-primary)]")}>
+                <span className={cn("text-[14px] font-black tracking-tight transition-colors", isActive ? "text-[var(--fg-primary)]" : "text-[var(--fg-muted)] group-hover:text-[var(--fg-primary)]")}>
                   {item.name}
                 </span>
                 {isActive && (
                   <motion.div 
                     layoutId="sidebar-active"
-                    className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_10px_var(--glow-accent)]"
+                    className="ml-auto w-2 h-2 rounded-full bg-[var(--accent)] shadow-[0_0_15px_var(--accent)]"
                   />
                 )}
               </Link>

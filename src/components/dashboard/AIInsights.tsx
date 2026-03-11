@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Sparkles, ArrowRight, Lightbulb, TrendingUp, AlertTriangle, Info } from 'lucide-react'
+import { Sparkles, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Insight {
@@ -25,10 +25,18 @@ export default function AIInsights({ workspaceId, month }: AIInsightsProps) {
     const cacheKey = `ai-insights-${workspaceId}-${month}`
     const cached = sessionStorage.getItem(cacheKey)
     if (cached) {
-      setInsights(JSON.parse(cached))
-      setLoading(false)
-      setError(null)
-      return
+      try {
+        const { data, timestamp } = JSON.parse(cached)
+        const isExpired = Date.now() - timestamp > 30 * 60 * 1000 // 30 minuti
+        if (!isExpired && data?.length > 0) {
+          setInsights(data)
+          setLoading(false)
+          setError(null)
+          return
+        }
+      } catch {
+        sessionStorage.removeItem(cacheKey)
+      }
     }
 
     try {
@@ -43,7 +51,7 @@ export default function AIInsights({ workspaceId, month }: AIInsightsProps) {
       const data = await res.json()
       if (data.insights && data.insights.length > 0) {
         setInsights(data.insights)
-        sessionStorage.setItem(cacheKey, JSON.stringify(data.insights))
+        sessionStorage.setItem(cacheKey, JSON.stringify({ data: data.insights, timestamp: Date.now() }))
       } else {
         setError('Nessun insight ricevuto dal modello AI.')
       }
@@ -83,8 +91,21 @@ export default function AIInsights({ workspaceId, month }: AIInsightsProps) {
           <Sparkles className="text-[var(--accent)]" size={20} />
           <h2 className="text-xl font-display font-bold text-[var(--fg-primary)]">Analisi del periodo</h2>
         </div>
-        <div className="px-3 py-1 bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-full text-[9px] font-black text-[var(--fg-subtle)] uppercase tracking-widest">
-          Powered by Groq · Llama 3.3
+        <div className="flex items-center gap-3">
+          <div className="px-3 py-1 bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-full text-[9px] font-black text-[var(--fg-subtle)] uppercase tracking-widest hidden sm:block">
+            Powered by Groq · Llama 3.3
+          </div>
+          <button
+            onClick={() => {
+              sessionStorage.removeItem(`ai-insights-${workspaceId}-${month}`)
+              fetchInsights()
+            }}
+            disabled={loading}
+            title="Aggiorna analisi"
+            className="p-2 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--fg-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]/30 transition-all disabled:opacity-40"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          </button>
         </div>
       </div>
 

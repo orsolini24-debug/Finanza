@@ -301,7 +301,7 @@ export default function TransactionsTable({ transactions, categories, accounts }
                           </p>
                           <button 
                             onClick={() => setEditingTx(tx)}
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--bg-elevated)] rounded-lg text-[var(--fg-subtle)] hover:text-[var(--accent)] transition-all"
+                            className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--bg-elevated)] rounded-lg text-[var(--fg-subtle)] hover:text-[var(--accent)] transition-all"
                           >
                             <Edit2 size={12} />
                           </button>
@@ -365,7 +365,8 @@ export default function TransactionsTable({ transactions, categories, accounts }
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-4 sm:bottom-10 left-1/2 -translate-x-1/2 z-50 w-full max-w-3xl px-3 sm:px-4"
+            className="fixed left-1/2 -translate-x-1/2 z-50 w-full max-w-3xl px-3 sm:px-4"
+            style={{ bottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}
           >
             <div className="glass p-3 sm:p-4 rounded-2xl sm:rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-[var(--border-default)] flex items-center justify-between gap-2 sm:gap-6">
               <div className="flex items-center gap-2 sm:gap-4 pl-1 sm:pl-2">

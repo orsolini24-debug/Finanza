@@ -184,23 +184,29 @@ export function ChartCarousel({ chartData, categoryData, monthlyData }: ChartCar
       </div>
 
       <div className="flex items-center justify-center gap-6 mt-4 md:mt-8">
-        <button onClick={handlePrev} className="p-2.5 bg-[var(--bg-elevated)] rounded-xl border border-[var(--border-subtle)] text-[var(--fg-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]/30 transition-all active:scale-90">
+        <button onClick={handlePrev} className="p-3 bg-[var(--bg-elevated)] rounded-xl border border-[var(--border-subtle)] text-[var(--fg-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]/30 transition-all active:scale-90 min-w-[44px] min-h-[44px] flex items-center justify-center">
           <ChevronLeft size={20} />
         </button>
         
-        <div className="flex gap-2">
+        <div className="flex gap-1">
           {[0, 1, 2, 3].map((i) => (
-            <div 
+            <button 
               key={i} 
-              className={cn(
-                "h-1.5 rounded-full transition-all duration-500",
-                activeIndex === i ? "w-8 bg-[var(--accent)] shadow-[0_0_10px_var(--glow-accent)]" : "w-1.5 bg-[var(--border-strong)]"
-              )} 
-            />
+              onClick={() => setActiveIndex(i)}
+              className="p-2 group"
+              aria-label={`Vai al grafico ${i + 1}`}
+            >
+              <div 
+                className={cn(
+                  "h-1.5 rounded-full transition-all duration-500",
+                  activeIndex === i ? "w-8 bg-[var(--accent)] shadow-[0_0_10px_var(--glow-accent)]" : "w-1.5 bg-[var(--border-strong)] group-hover:bg-[var(--fg-muted)]"
+                )} 
+              />
+            </button>
           ))}
         </div>
 
-        <button onClick={handleNext} className="p-2.5 bg-[var(--bg-elevated)] rounded-xl border border-[var(--border-subtle)] text-[var(--fg-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]/30 transition-all active:scale-90">
+        <button onClick={handleNext} className="p-3 bg-[var(--bg-elevated)] rounded-xl border border-[var(--border-subtle)] text-[var(--fg-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]/30 transition-all active:scale-90 min-w-[44px] min-h-[44px] flex items-center justify-center">
           <ChevronRight size={20} />
         </button>
       </div>

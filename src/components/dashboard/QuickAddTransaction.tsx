@@ -84,24 +84,33 @@ export default function QuickAddTransaction({ categories, accounts }: QuickAddTr
 
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300"
+          className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-in fade-in duration-300"
           onClick={(e) => e.target === e.currentTarget && setIsOpen(false)}
         >
-          <div className="glass bg-[var(--bg-surface)] rounded-[3rem] shadow-2xl w-full max-w-lg border border-[var(--border-default)] overflow-hidden scale-in animate-in zoom-in-95" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-8 border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)]/30">
+          <div 
+            className="glass bg-[var(--bg-surface)] rounded-t-[2rem] sm:rounded-[3rem] shadow-2xl w-full sm:max-w-[min(512px,92vw)] border border-[var(--border-default)] overflow-hidden scale-in animate-in zoom-in-95" 
+            onClick={(e) => e.stopPropagation()}
+            style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          >
+            {/* Handle - visibile solo su mobile */}
+            <div className="sm:hidden flex justify-center pt-3 pb-1 -mb-2">
+              <div className="w-10 h-1 rounded-full bg-[var(--border-default)]" />
+            </div>
+
+            <div className="flex justify-between items-center p-4 sm:p-8 border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)]/30">
               <div>
-                <h2 className="text-2xl font-display font-bold text-[var(--fg-primary)]">
+                <h2 className="text-xl sm:text-2xl font-display font-bold text-[var(--fg-primary)]">
                   Nuova Operazione
                 </h2>
-                <p className="text-xs text-[var(--fg-muted)] font-medium mt-1">Inserimento manuale singola transazione</p>
+                <p className="text-[10px] sm:text-xs text-[var(--fg-muted)] font-medium mt-1">Inserimento manuale singola transazione</p>
               </div>
-              <button onClick={() => setIsOpen(false)} className="text-[var(--fg-muted)] hover:text-[var(--fg-primary)] transition-colors p-3 hover:bg-[var(--bg-elevated)] rounded-2xl border border-[var(--border-subtle)]">
-                <X className="w-6 h-6" />
+              <button onClick={() => setIsOpen(false)} className="text-[var(--fg-muted)] hover:text-[var(--fg-primary)] transition-colors p-2.5 sm:p-3 hover:bg-[var(--bg-elevated)] rounded-2xl border border-[var(--border-subtle)]">
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
 
             {!hasAccounts ? (
-              <div className="p-8 space-y-6 flex flex-col items-center text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="p-4 sm:p-8 space-y-6 flex flex-col items-center text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="p-6 bg-yellow-500/10 rounded-[2rem] border border-yellow-500/20">
                   <Wallet size={48} className="text-yellow-500 opacity-80" />
                 </div>
@@ -121,7 +130,7 @@ export default function QuickAddTransaction({ categories, accounts }: QuickAddTr
                 </Link>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="p-8 space-y-8">
+              <form onSubmit={handleSubmit} className="p-4 sm:p-8 space-y-6 sm:space-y-8">
                 {/* Type Switcher */}
                 <div className="flex p-1.5 bg-[var(--bg-input)] rounded-2xl border border-[var(--border-default)]">
                   <button
@@ -154,15 +163,15 @@ export default function QuickAddTransaction({ categories, accounts }: QuickAddTr
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   <div className="space-y-2 md:col-span-2">
                     <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest ml-1">Descrizione *</label>
                     <input
                       name="description"
                       required
                       autoFocus
-                      disabled={isPending} // Problem #28 - Disable inputs while loading
-                      className="w-full px-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--fg-primary)] transition-all font-medium disabled:opacity-50"
+                      disabled={isPending}
+                      className="w-full px-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--fg-primary)] text-base transition-all font-medium disabled:opacity-50"
                       placeholder="es. Cena ristorante"
                     />
                   </div>
@@ -176,7 +185,7 @@ export default function QuickAddTransaction({ categories, accounts }: QuickAddTr
                       min="0.01"
                       required
                       disabled={isPending}
-                      className="w-full px-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--fg-primary)] transition-all font-mono font-bold text-lg disabled:opacity-50"
+                      className="w-full px-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--fg-primary)] text-base transition-all font-mono font-bold text-lg disabled:opacity-50"
                       placeholder="0.00"
                     />
                   </div>
@@ -191,7 +200,7 @@ export default function QuickAddTransaction({ categories, accounts }: QuickAddTr
                         defaultValue={new Date().toISOString().split('T')[0]}
                         required
                         disabled={isPending}
-                        className="w-full pl-12 pr-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--fg-primary)] transition-all font-medium disabled:opacity-50"
+                        className="w-full pl-12 pr-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--fg-primary)] text-base transition-all font-medium disabled:opacity-50"
                       />
                     </div>
                   </div>
@@ -206,7 +215,7 @@ export default function QuickAddTransaction({ categories, accounts }: QuickAddTr
                         onChange={(e) => setSelectedAccountId(e.target.value)}
                         required
                         disabled={isPending}
-                        className="w-full pl-12 pr-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--fg-primary)] transition-all font-medium appearance-none cursor-pointer disabled:opacity-50"
+                        className="w-full pl-12 pr-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--fg-primary)] text-base transition-all font-medium appearance-none cursor-pointer disabled:opacity-50"
                       >
                         {accounts.map(acc => (
                           <option key={acc.id} value={acc.id}>{acc.name}</option>
@@ -222,7 +231,7 @@ export default function QuickAddTransaction({ categories, accounts }: QuickAddTr
                       <select
                         name="categoryId"
                         disabled={isPending}
-                        className="w-full pl-12 pr-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--fg-primary)] transition-all font-medium appearance-none cursor-pointer disabled:opacity-50"
+                        className="w-full pl-12 pr-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--fg-primary)] text-base transition-all font-medium appearance-none cursor-pointer disabled:opacity-50"
                       >
                         <option value="">— Nessuna —</option>
                         {filteredCategories.map(cat => (

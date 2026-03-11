@@ -22,9 +22,9 @@ import {
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
-import HelpPanel from "@/components/help/HelpPanel";
-import OnboardingTour from "@/components/help/OnboardingTour";
-import { Tooltip } from "@/components/ui/Tooltip";
+import HelpPanel from "../help/HelpPanel";
+import OnboardingTour from "../help/OnboardingTour";
+import { Tooltip } from "../ui/Tooltip";
 
 const navItems = [
   { name: "Dashboard", href: "/app/dashboard", icon: LayoutDashboard, tooltip: "Panoramica generale: patrimonio netto, KPI mensili, AI Insights e grafici cash flow" },
@@ -42,56 +42,34 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const month = searchParams.get('month');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showTour, setShowTour] = useState(false);
 
-  // Chiudi sidebar al cambio di route
+  // Chiudi sidebar mobile al cambio route
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
 
-  // Blocca scroll body quando aperto su mobile
-  useEffect(() => {
-    if (mobileOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => { document.body.style.overflow = ''; };
-  }, [mobileOpen]);
+  const monthParam = searchParams.get('month');
 
   const sidebarContent = (
-    <div className="flex flex-col h-full">
-      <div className="p-6 flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="p-2 bg-[var(--accent)] rounded-lg shadow-[0_0_15px_var(--glow-accent)]">
-              <Landmark size={20} className="text-[var(--accent-on)]" />
-            </div>
-            <h1 className="text-xl font-display font-bold text-[var(--fg-primary)] tracking-tight">
-              Finance
-            </h1>
-          </div>
-          <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[var(--fg-subtle)] ml-11">
-            Personale
-          </p>
+    <div className="flex flex-col h-full py-6 px-4">
+      {/* Brand Logo */}
+      <div className="flex items-center gap-3 px-2 mb-10">
+        <div className="w-10 h-10 bg-[var(--accent)] rounded-2xl flex items-center justify-center shadow-[0_0_20px_var(--glow-accent)]">
+          <Wallet className="text-[var(--accent-on)]" size={22} strokeWidth={2.5} />
         </div>
-        {/* Close button mobile */}
-        <button
-          onClick={() => setMobileOpen(false)}
-          className="md:hidden p-2 rounded-xl text-[var(--fg-muted)] hover:bg-[var(--bg-elevated)] transition-colors"
-        >
-          <X size={18} />
-        </button>
+        <span className="font-display font-black text-xl tracking-tighter text-[var(--fg-primary)]">FINANZA</span>
       </div>
 
-      <nav className="flex-1 px-3 space-y-1 mt-4 overflow-y-auto custom-scrollbar">
+      {/* Navigation */}
+      <nav className="flex-1 space-y-1.5 custom-scrollbar overflow-y-auto pr-1">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          const href = month ? `${item.href}?month=${month}` : item.href;
-
+          const isActive = pathname === item.href || (item.href !== '/app/dashboard' && pathname.startsWith(item.href));
+          const href = monthParam ? `${item.href}?month=${monthParam}` : item.href;
+          
+          const Icon = item.icon;
           return (
             <Tooltip key={item.href} content={item.tooltip} side="right" delay={300}>
               <Link
@@ -103,10 +81,7 @@ export default function Sidebar() {
                     : "text-[var(--fg-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--fg-primary)]"
                 )}
               >
-                <item.icon size={18} className={cn(
-                  "transition-transform duration-200 shrink-0",
-                  isActive ? "scale-110" : "group-hover:scale-110"
-                )} />
+                <Icon size={18} className={cn("transition-transform group-hover:scale-110 shrink-0", isActive && "text-[var(--accent)]")} />
                 <span className="text-sm font-medium">{item.name}</span>
               </Link>
             </Tooltip>
@@ -114,7 +89,8 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 mt-auto border-t border-[var(--border-subtle)] space-y-1">
+      {/* Footer Actions */}
+      <div className="mt-auto pt-6 space-y-1 border-t border-[var(--border-subtle)]">
         <button
           onClick={() => setShowHelp(true)}
           className="w-full flex items-center gap-3 px-4 py-3 text-[var(--fg-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--accent)] rounded-xl transition-all duration-200 group"
@@ -148,8 +124,7 @@ export default function Sidebar() {
       {/* Hamburger button — visible only on mobile, inside header area */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="md:hidden fixed top-3.5 left-4 z-40 p-2.5 bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] rounded-xl shadow-md text-[var(--fg-primary)] transition-all active:scale-95"
-        aria-label="Apri menu"
+        className="md:hidden fixed top-3.5 left-4 z-50 p-3 min-w-[44px] min-h-[44px] flex items-center justify-center bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl text-[var(--fg-primary)] shadow-lg"
       >
         <Menu size={20} />
       </button>
@@ -164,12 +139,10 @@ export default function Sidebar() {
 
       {/* Sidebar panel */}
       <div className={cn(
-        // Mobile: fixed drawer sliding from left
-        "fixed inset-y-0 left-0 z-50 w-72 bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] transition-transform duration-300 ease-in-out",
-        // Desktop: static in the flex layout
+        "fixed inset-y-0 left-0 z-40 w-[min(288px,85vw)] bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] shadow-2xl transition-transform duration-300 ease-in-out",
         "md:static md:w-60 md:h-screen md:z-auto md:translate-x-0 md:flex md:flex-col",
         mobileOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
+      )} style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))' }}>
         {sidebarContent}
       </div>
     </>

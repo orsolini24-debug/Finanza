@@ -221,3 +221,16 @@ body {
 button, a, [role="button"] {
   touch-action: manipulation;
 }
+
+/* PWA standalone: comportamento nativo */
+@media (display-mode: standalone) {
+  body {
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Rimuovi highlight touch su mobile */
+* {
+  -webkit-tap-highlight-color: transparent;
+}

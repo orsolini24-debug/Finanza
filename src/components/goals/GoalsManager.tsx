@@ -61,7 +61,13 @@ export default function GoalsManager({ goals, accounts }: GoalsManagerProps) {
       setError("Nome obbligatorio");
       return;
     }
-    formData.set('name', name);
+    const targetAmount = Number(formData.get('targetAmount'));
+    const currentAmount = Number(formData.get('currentAmount'));
+
+    if (currentAmount > targetAmount) {
+      setError("L'importo attuale non può superare il target");
+      return;
+    }
 
     startTransition(async () => {
       try {
@@ -151,10 +157,15 @@ export default function GoalsManager({ goals, accounts }: GoalsManagerProps) {
                   </div>
                   <div className="w-full bg-[var(--bg-input)] rounded-full h-3 overflow-hidden p-0.5 border border-[var(--border-subtle)]">
                     <div
-                      className={cn("h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(0,0,0,0.2)]", isExpired ? "bg-red-500" : typeInfo.bar)}
+                      className={cn("h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(0,0,0,0.2)]", isExpired ? "bg-red-500" : (progress >= 100 ? "bg-[var(--income)]" : typeInfo.bar))}
                       style={{ width: `${progress}%` }}
                     />
                   </div>
+                  {progress >= 100 && (
+                    <p className="text-[11px] font-bold text-[var(--income)] mt-1 flex items-center gap-1">
+                      🎯 Obiettivo raggiunto!
+                    </p>
+                  )}
                   <div className="flex justify-between text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest mt-3">   
                     <span>Scadenza</span>
                     <span className={cn(isExpired && "text-red-400 font-black")}>{new Date(goal.endDate).toLocaleDateString('it-IT')}</span> 

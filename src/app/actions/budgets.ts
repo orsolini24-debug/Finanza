@@ -11,7 +11,7 @@ export async function getBudgetsWithSpending(workspaceId: string, month: string)
   const budgets = await prisma.budget.findMany({
     where: {
       workspaceId,
-      periodStart: { lte: end }, // Problem #8 - Fix date range for past budgets
+      periodStart: { lte: end },
       periodEnd: { gte: start },
     },
     include: {
@@ -35,7 +35,7 @@ export async function getBudgetsWithSpending(workspaceId: string, month: string)
       const spent = Math.abs(Number(spending._sum.amount || 0));
       const amount = Number(budget.amount);
       const remaining = amount - spent;
-      const percentage = Math.min(100, (spent / amount) * 100);
+      const percentage = amount > 0 ? Math.min(100, (spent / amount) * 100) : 0;
 
       return {
         id: budget.id,
@@ -106,6 +106,51 @@ export async function deleteBudget(id: string) {
     revalidatePath('/app/budget');
     revalidatePath('/app/dashboard');
     return { success: true };
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}
+
+export async function copyBudgetFromPreviousMonth(workspaceId: string, currentMonth: string) {
+  try {
+    const { workspace } = await getWorkspaceForUser();
+    if (workspace.id !== workspaceId) throw new Error("Unauthorized");
+
+    const [y, m] = currentMonth.split('-').map(Number);
+    const prevDate = new Date(y, m - 2, 1);
+    const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+    const { start: prevStart } = getPeriodRange(prevMonth);
+    const { start: currStart, end: currEnd } = getPeriodRange(currentMonth);
+
+    const prevBudgets = await prisma.budget.findMany({
+      where: { workspaceId, periodStart: prevStart }
+    });
+
+    if (prevBudgets.length === 0) return { copied: 0 };
+
+    let copiedCount = 0;
+    for (const b of prevBudgets) {
+      const existing = await prisma.budget.findFirst({
+        where: { workspaceId, categoryId: b.categoryId, periodStart: currStart }
+      });
+
+      if (!existing) {
+        await prisma.budget.create({
+          data: {
+            workspaceId,
+            categoryId: b.categoryId,
+            amount: b.amount,
+            periodStart: currStart,
+            periodEnd: currEnd,
+          }
+        });
+        copiedCount++;
+      }
+    }
+
+    revalidatePath('/app/budget');
+    revalidatePath('/app/dashboard');
+    return { copied: copiedCount };
   } catch (error: any) {
     throw new Error(error.message);
   }

@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo, useEffect } from 'react'
 import { Transaction, Category, Account, TxStatus } from '@prisma/client'
-import { Search, Filter, Check, X, Trash2, Tags, ChevronDown, CheckCircle2, AlertCircle, Edit2, Loader2 } from 'lucide-react'
+import { Search, Filter, Check, X, Trash2, Tags, ChevronDown, CheckCircle2, AlertCircle, Edit2, Loader2, Download } from 'lucide-react'
 import { confirmTransactions, deleteTransactions, setTransactionCategory } from '@/app/actions/transactions'
 import { useRouter } from 'next/navigation'
 import { cn, formatCurrency } from '@/lib/utils'
@@ -124,11 +124,33 @@ export default function TransactionsTable({ transactions, categories, accounts }
 
   const activeFiltersCount = [filterStatus !== 'ALL', filterType !== 'ALL', filterCategoryId !== 'ALL'].filter(Boolean).length
 
+  const exportToCSV = () => {
+    const rows = filtered.map(tx => ({
+      Data: new Date(tx.date).toLocaleDateString('it-IT'),
+      Descrizione: tx.description,
+      Importo: Number(tx.amount).toFixed(2),
+      Categoria: tx.category?.name || '',
+      Stato: tx.status === 'CONFIRMED' ? 'Confermata' : 'In attesa',
+    }))
+    const headers = ['Data', 'Descrizione', 'Importo', 'Categoria', 'Stato']
+    const csv = [
+      headers.join(','),
+      ...rows.map(r => headers.map(h => `"${(r as any)[h]}"`).join(','))
+    ].join('\n')
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `transazioni-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="space-y-6 pb-24">
       {/* Toolbar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <div className="relative flex-1 md:flex-none group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--fg-subtle)] w-4 h-4 group-focus-within:text-[var(--accent)] transition-colors" />
             <input
@@ -151,6 +173,14 @@ export default function TransactionsTable({ transactions, categories, accounts }
             <Filter className="w-4 h-4" />
             <span>Filtra{activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ''}</span>
             <ChevronDown className={cn("w-3 h-3 transition-transform duration-300", showFilter ? "rotate-180" : "")} />
+          </button>
+
+          <button
+            onClick={exportToCSV}
+            className="flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-xl text-sm font-bold text-[var(--fg-muted)] hover:text-[var(--fg-primary)] hover:border-[var(--border-default)] transition-all"
+          >
+            <Download size={14} />
+            <span className="hidden sm:inline">Esporta CSV</span>
           </button>
         </div>
         

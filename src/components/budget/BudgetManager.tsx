@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import { Category } from '@prisma/client'
-import { Tag, Plus, Trash2, Edit2, Check, X, Loader2, AlertCircle, Info } from 'lucide-react'
-import { upsertBudget, deleteBudget } from '@/app/actions/budgets'
+import { Tag, Plus, Trash2, Edit2, Check, X, Loader2, AlertCircle, Info, Copy } from 'lucide-react'
+import { upsertBudget, deleteBudget, copyBudgetFromPreviousMonth } from '@/app/actions/budgets'
 import { useRouter } from 'next/navigation'
 import { cn, formatCurrency } from '@/lib/utils'
 
@@ -71,6 +71,26 @@ export default function BudgetManager({ budgetData, categories, month }: BudgetM
   const totalBudget = budgetData.reduce((s, b) => s + b.amount, 0)
   const totalSpent = budgetData.reduce((s, b) => s + b.spent, 0)
   const totalPercentage = totalBudget > 0 ? Math.min(100, (totalSpent / totalBudget) * 100) : 0
+
+  const handleCopyFromPrev = async () => {
+    if (isPending) return
+    const workspaceId = budgetData.length > 0 ? budgetData[0].category.workspaceId : (categories.length > 0 ? categories[0].workspaceId : null)
+    if (!workspaceId) return
+
+    startTransition(async () => {
+      try {
+        const result = await copyBudgetFromPreviousMonth(workspaceId, month)
+        if (result.copied > 0) {
+          alert(`${result.copied} budget copiati dal mese precedente.`)
+          router.refresh()
+        } else {
+          alert('Nessun budget trovato nel mese precedente.')
+        }
+      } catch (e: any) {
+        alert(e.message)
+      }
+    })
+  }
 
   return (
     <div className="space-y-10">
@@ -199,15 +219,26 @@ export default function BudgetManager({ budgetData, categories, month }: BudgetM
 
           {budgetData.length === 0 && !showModal && (
             <div className="glass p-12 rounded-[2rem] border border-dashed border-[var(--border-default)] text-center">
-              <p className="text-[var(--fg-muted)] font-medium">Nessun budget configurato per questo mese.</p>
-              {availableCategories.length > 0 && (
+              <p className="text-[var(--fg-muted)] font-medium mb-6">Nessun budget configurato per questo mese.</p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                {availableCategories.length > 0 && (
+                  <button 
+                    onClick={() => setShowModal(true)}
+                    className="bg-[var(--accent)] text-[var(--accent-on)] px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:shadow-[0_0_20px_var(--glow-accent)] transition-all"
+                  >
+                    <Plus size={16} className="inline mr-2" />
+                    Crea il primo budget
+                  </button>
+                )}
                 <button 
-                  onClick={() => setShowModal(true)}
-                  className="mt-4 bg-[var(--accent)] text-[var(--accent-on)] px-6 py-2 rounded-xl font-bold text-xs"
+                  onClick={handleCopyFromPrev}
+                  disabled={isPending}
+                  className="bg-[var(--bg-elevated)] text-[var(--fg-primary)] border border-[var(--border-subtle)] px-6 py-3 rounded-xl font-bold text-sm hover:bg-[var(--bg-elevated)]/80 transition-all disabled:opacity-50"
                 >
-                  Crea il primo budget
+                  <Copy size={16} className="inline mr-2" />
+                  Copia dal mese precedente
                 </button>
-              )}
+              </div>
             </div>
           )}
         </div>

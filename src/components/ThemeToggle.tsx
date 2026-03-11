@@ -48,7 +48,7 @@ export default function ThemeToggle() {
       {open && (
         <>
           <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 w-48 glass p-2 rounded-2xl z-[101] shadow-xl animate-in slide-in-from-top-2 duration-200">
+          <div className="absolute right-0 top-full mt-2 w-52 p-2 rounded-2xl z-[101] shadow-2xl border border-[var(--border-default)] animate-in slide-in-from-top-2 duration-200" style={{ background: 'var(--bg-surface)' }}>
             <div className="grid grid-cols-1 gap-1">
               {THEMES.map((t) => (
                 <button

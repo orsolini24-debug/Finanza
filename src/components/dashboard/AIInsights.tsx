@@ -19,38 +19,60 @@ interface AIInsightsProps {
 export default function AIInsights({ workspaceId, month }: AIInsightsProps) {
   const [insights, setInsights] = useState<Insight[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    async function fetchInsights() {
-      // Controllo session storage per evitare chiamate inutili nello stesso mese/sessione
-      const cacheKey = `ai-insights-${workspaceId}-${month}`
-      const cached = sessionStorage.getItem(cacheKey)
-      if (cached) {
-        setInsights(JSON.parse(cached))
-        setLoading(false)
-        return
-      }
-
-      try {
-        setLoading(true)
-        const res = await fetch('/api/insights', {
-          method: 'POST',
-          body: JSON.stringify({ workspaceId, month })
-        })
-        const data = await res.json()
-        if (data.insights) {
-          setInsights(data.insights)
-          sessionStorage.setItem(cacheKey, JSON.stringify(data.insights))
-        }
-      } catch (e) {
-        console.error('AI error', e)
-      } finally {
-        setLoading(false)
-      }
+  const fetchInsights = async () => {
+    const cacheKey = `ai-insights-${workspaceId}-${month}`
+    const cached = sessionStorage.getItem(cacheKey)
+    if (cached) {
+      setInsights(JSON.parse(cached))
+      setLoading(false)
+      setError(null)
+      return
     }
 
-    fetchInsights()
-  }, [workspaceId, month])
+    try {
+      setLoading(true)
+      setError(null)
+      const res = await fetch('/api/insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspaceId, month })
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      if (data.insights && data.insights.length > 0) {
+        setInsights(data.insights)
+        sessionStorage.setItem(cacheKey, JSON.stringify(data.insights))
+      } else {
+        setError('Nessun insight ricevuto dal modello AI.')
+      }
+    } catch (e: any) {
+      console.error('AI error', e)
+      setError('Impossibile connettersi a Groq. Verifica che GROQ_API_KEY sia configurata nelle variabili d\'ambiente.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { fetchInsights() }, [workspaceId, month])
+
+  if (!loading && error) {
+    return (
+      <div className="glass p-5 rounded-[2rem] border border-[var(--warning)]/20 bg-[var(--warning-dim)]/5 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Sparkles className="text-[var(--warning)] shrink-0" size={18} />
+          <p className="text-xs text-[var(--fg-muted)] font-medium">{error}</p>
+        </div>
+        <button
+          onClick={() => { sessionStorage.removeItem(`ai-insights-${workspaceId}-${month}`); fetchInsights() }}
+          className="text-[10px] font-bold text-[var(--accent)] hover:underline shrink-0"
+        >
+          Riprova
+        </button>
+      </div>
+    )
+  }
 
   if (!loading && insights.length === 0) return null
 

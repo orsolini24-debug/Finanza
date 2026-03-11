@@ -24,18 +24,19 @@ import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import HelpPanel from "@/components/help/HelpPanel";
 import OnboardingTour from "@/components/help/OnboardingTour";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 const navItems = [
-  { name: "Dashboard", href: "/app/dashboard", icon: LayoutDashboard },
-  { name: "Conti", href: "/app/accounts", icon: Wallet },
-  { name: "Budget", href: "/app/budget", icon: PieChart },
-  { name: "Ricorrenti", href: "/app/recurring", icon: RefreshCw },
-  { name: "Transazioni", href: "/app/transactions", icon: ArrowLeftRight },
-  { name: "Report", href: "/app/reports", icon: BarChart3 },
-  { name: "Importa", href: "/app/import", icon: Upload },
-  { name: "Categorie", href: "/app/categories", icon: Tag },
-  { name: "Regole", href: "/app/rules", icon: Zap },
-  { name: "Obiettivi", href: "/app/goals", icon: Target },
+  { name: "Dashboard", href: "/app/dashboard", icon: LayoutDashboard, tooltip: "Panoramica generale: patrimonio netto, KPI mensili, AI Insights e grafici cash flow" },
+  { name: "Conti", href: "/app/accounts", icon: Wallet, tooltip: "Gestisci conti correnti, carte, risparmi, investimenti e debiti" },
+  { name: "Budget", href: "/app/budget", icon: PieChart, tooltip: "Imposta limiti di spesa mensili per categoria e monitora quanto hai usato" },
+  { name: "Ricorrenti", href: "/app/recurring", icon: RefreshCw, tooltip: "Pagamenti fissi e entrate periodiche (affitto, stipendio, abbonamenti…)" },
+  { name: "Transazioni", href: "/app/transactions", icon: ArrowLeftRight, tooltip: "Storico completo dei movimenti: conferma, modifica o elimina transazioni" },
+  { name: "Report", href: "/app/reports", icon: BarChart3, tooltip: "Statistiche avanzate su 6 mesi: cash flow, categorie di spesa, confronti mensili" },
+  { name: "Importa", href: "/app/import", icon: Upload, tooltip: "Importa movimenti da file CSV della tua banca con auto-categorizzazione" },
+  { name: "Categorie", href: "/app/categories", icon: Tag, tooltip: "Crea e organizza le categorie di spesa (Alimentari, Trasporti, Svago…)" },
+  { name: "Regole", href: "/app/rules", icon: Zap, tooltip: "Regole automatiche per categorizzare le transazioni importate da CSV" },
+  { name: "Obiettivi", href: "/app/goals", icon: Target, tooltip: "Definisci traguardi di risparmio e monitora i progressi verso ogni obiettivo" },
 ];
 
 export default function Sidebar() {
@@ -92,22 +93,23 @@ export default function Sidebar() {
           const href = month ? `${item.href}?month=${month}` : item.href;
 
           return (
-            <Link
-              key={item.href}
-              href={href}
-              className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
-                isActive
-                  ? "bg-[var(--accent-dim)] text-[var(--accent)] border-l-2 border-[var(--accent)]"
-                  : "text-[var(--fg-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--fg-primary)]"
-              )}
-            >
-              <item.icon size={18} className={cn(
-                "transition-transform duration-200 shrink-0",
-                isActive ? "scale-110" : "group-hover:scale-110"
-              )} />
-              <span className="text-sm font-medium">{item.name}</span>
-            </Link>
+            <Tooltip key={item.href} content={item.tooltip} side="right" delay={300}>
+              <Link
+                href={href}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group w-full",
+                  isActive
+                    ? "bg-[var(--accent-dim)] text-[var(--accent)] border-l-2 border-[var(--accent)]"
+                    : "text-[var(--fg-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--fg-primary)]"
+                )}
+              >
+                <item.icon size={18} className={cn(
+                  "transition-transform duration-200 shrink-0",
+                  isActive ? "scale-110" : "group-hover:scale-110"
+                )} />
+                <span className="text-sm font-medium">{item.name}</span>
+              </Link>
+            </Tooltip>
           );
         })}
       </nav>

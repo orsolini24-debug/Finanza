@@ -161,7 +161,7 @@ export default async function Dashboard({
     <div className="max-w-7xl mx-auto space-y-10 animate-in fade-in duration-1000">
       
       {/* SPRINT E: Header con breakdown patrimonio */}
-      <DashboardHeader 
+      <DashboardHeader
         totalNetWorth={currentTotalBalance}
         liquid={liquidBalance}
         available={availableLiquidity}
@@ -171,6 +171,7 @@ export default async function Dashboard({
         debts={debtBalance}
         categories={serializedCategories}
         accounts={serializedAccounts}
+        userName={session.user?.name || (session.user?.email?.split('@')[0]) || undefined}
       />
 
       {/* KPI Stats */}

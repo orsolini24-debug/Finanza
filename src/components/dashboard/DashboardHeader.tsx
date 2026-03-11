@@ -17,6 +17,7 @@ interface DashboardHeaderProps {
   debts: number
   categories: any[]
   accounts: any[]
+  userName?: string
 }
 
 export function DashboardHeader({
@@ -28,7 +29,8 @@ export function DashboardHeader({
   earmarked,
   debts,
   categories,
-  accounts
+  accounts,
+  userName,
 }: DashboardHeaderProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -41,8 +43,23 @@ export function DashboardHeader({
     return () => window.removeEventListener('keydown', handleEsc);
   }, []);
 
+  const greeting = (() => {
+    const h = new Date().getHours()
+    if (h < 12) return 'Buongiorno'
+    if (h < 18) return 'Buonasera'
+    return 'Buonasera'
+  })()
+
   return (
     <div className="space-y-6">
+      {userName && (
+        <div className="flex items-center gap-2 px-1">
+          <span className="text-xl">👋</span>
+          <p className="text-lg font-display font-bold text-[var(--fg-primary)]">
+            {greeting}, <span className="text-[var(--accent)]">{userName}</span>!
+          </p>
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Main Patrimonio Card */}
         <div

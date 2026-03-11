@@ -107,7 +107,7 @@ export async function executeRecurring(id: string) {
 
     if (!item.accountId) throw new Error("Conto non configurato per questa ricorrenza");
 
-    // 1. Crea la transazione
+    // 1. Crea la transazione con la data odierna (registrazione manuale = oggi)
     await prisma.transaction.create({
       data: {
         workspaceId: workspace.id,
@@ -115,7 +115,7 @@ export async function executeRecurring(id: string) {
         categoryId: item.categoryId,
         description: item.name,
         amount: item.isIncome ? item.amount : -Math.abs(Number(item.amount)),
-        date: item.nextDate,
+        date: new Date(),
         status: 'CONFIRMED',
       },
     });

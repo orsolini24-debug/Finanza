@@ -1,11 +1,15 @@
 'use client'
 
-import { useState, useTransition, useEffect } from 'react'
+import { useState, useTransition, useEffect, useMemo } from 'react'
 import { RecurringItem, Category, Account } from '@prisma/client'
-import { Plus, RefreshCw, Trash2, Edit2, Check, X, Loader2, Calendar, Tag, Wallet, ArrowUpRight, ArrowDownRight, Clock, AlertCircle } from 'lucide-react'
+import { Plus, RefreshCw, Trash2, Edit2, Check, X, Loader2, Calendar, Tag, Wallet, ArrowUpRight, ArrowDownRight, Clock, AlertCircle, Calculator } from 'lucide-react'
 import { createRecurringItem, updateRecurringItem, deleteRecurringItem, executeRecurring } from '@/app/actions/recurring'
 import { useRouter } from 'next/navigation'
 import { cn, filterCategoriesByType } from '@/lib/utils'
+
+function toLocalDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
 
 interface RecurringWithRelations extends RecurringItem {
   category: Category | null
@@ -30,10 +34,46 @@ export default function RecurringManager({ items, categories, accounts }: Recurr
   const [showModal, setShowModal] = useState(false)
   const [editingItem, setEditingItem] = useState<RecurringWithRelations | null>(null)
   const [isIncome, setIsIncome] = useState(false)
-  
   const [executingId, setExecutingId] = useState<string | null>(null)
 
+  // Campi controllati per calcolo automatico endDate
+  const [amountVal, setAmountVal] = useState('')
+  const [totalAmountVal, setTotalAmountVal] = useState('')
+  const [cadenceVal, setCadenceVal] = useState('monthly')
+  const [nextDateVal, setNextDateVal] = useState(toLocalDate(new Date()))
+  const [endDateVal, setEndDateVal] = useState('')
+
   const filteredCategories = filterCategoriesByType(categories, isIncome)
+
+  // Calcolo occorrenze e data fine automatica
+  const occurrences = useMemo(() => {
+    const single = parseFloat(amountVal)
+    const total = parseFloat(totalAmountVal)
+    if (!single || !total || single <= 0 || total <= 0) return null
+    return Math.round(total / single)
+  }, [amountVal, totalAmountVal])
+
+  useEffect(() => {
+    if (!occurrences || occurrences < 1 || !nextDateVal) return
+    const start = new Date(nextDateVal)
+    if (isNaN(start.getTime())) return
+    const end = new Date(start)
+    if (cadenceVal === 'weekly') end.setDate(end.getDate() + (occurrences - 1) * 7)
+    else if (cadenceVal === 'monthly') end.setMonth(end.getMonth() + (occurrences - 1))
+    else if (cadenceVal === 'yearly') end.setFullYear(end.getFullYear() + (occurrences - 1))
+    setEndDateVal(toLocalDate(end))
+  }, [occurrences, nextDateVal, cadenceVal])
+
+  // Reset form quando apre/chiude modal
+  useEffect(() => {
+    if (showModal) {
+      setAmountVal(editingItem ? String(Number(editingItem.amount)) : '')
+      setTotalAmountVal('')
+      setCadenceVal(editingItem?.cadence || 'monthly')
+      setNextDateVal(editingItem ? toLocalDate(new Date(editingItem.nextDate)) : toLocalDate(new Date()))
+      setEndDateVal((editingItem as any)?.endDate ? toLocalDate(new Date((editingItem as any).endDate)) : '')
+    }
+  }, [showModal, editingItem])
 
   const upcomingItems = items
     .filter(item => {
@@ -286,27 +326,36 @@ export default function RecurringManager({ items, categories, accounts }: Recurr
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest ml-1">Importo (€) *</label>
-                  <input name="amount" type="number" step="0.01" defaultValue={editingItem ? Number(editingItem.amount) : ''} required className="w-full px-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl text-[var(--fg-primary)] font-mono font-bold" />
+                  <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest ml-1">Importo rata (€) *</label>
+                  <input
+                    name="amount"
+                    type="number"
+                    step="0.01"
+                    value={amountVal}
+                    onChange={e => setAmountVal(e.target.value)}
+                    required
+                    className="w-full px-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl text-[var(--fg-primary)] font-mono font-bold"
+                    placeholder="0.00"
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest ml-1">Tipo *</label>
                   <div className="flex p-1 bg-[var(--bg-input)] rounded-2xl border border-[var(--border-default)] h-[58px]">
-                    <button 
-                      type="button" 
-                      onClick={() => setIsIncome(false)} 
+                    <button
+                      type="button"
+                      onClick={() => setIsIncome(false)}
                       className={cn(
-                        "flex-1 rounded-xl text-[10px] font-black uppercase transition-all", 
+                        "flex-1 rounded-xl text-[10px] font-black uppercase transition-all",
                         !isIncome ? "bg-[var(--expense)] text-white shadow-lg" : "text-[var(--fg-muted)] hover:text-[var(--fg-primary)]"
                       )}
                     >
                       Uscita
                     </button>
-                    <button 
-                      type="button" 
-                      onClick={() => setIsIncome(true)} 
+                    <button
+                      type="button"
+                      onClick={() => setIsIncome(true)}
                       className={cn(
-                        "flex-1 rounded-xl text-[10px] font-black uppercase transition-all", 
+                        "flex-1 rounded-xl text-[10px] font-black uppercase transition-all",
                         isIncome ? "bg-[var(--income)] text-[var(--accent-on)] shadow-lg" : "text-[var(--fg-muted)] hover:text-[var(--fg-primary)]"
                       )}
                     >
@@ -316,10 +365,36 @@ export default function RecurringManager({ items, categories, accounts }: Recurr
                 </div>
               </div>
 
+              {/* Importo totale — calcola automaticamente la data fine */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                  <Calculator size={10} />
+                  Importo totale (€) <span className="normal-case font-medium text-[var(--fg-muted)]">— opzionale, calcola la data fine automaticamente</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={totalAmountVal}
+                  onChange={e => setTotalAmountVal(e.target.value)}
+                  className="w-full px-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl text-[var(--fg-primary)] font-mono"
+                  placeholder="es. 1200 → 12 rate da €100"
+                />
+                {occurrences && occurrences > 0 && (
+                  <p className="text-[10px] text-[var(--accent)] font-bold ml-1">
+                    → {occurrences} {occurrences === 1 ? 'rata' : 'rate'} · Fine il {new Date(endDateVal).toLocaleDateString('it-IT')}
+                  </p>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest ml-1">Cadenza *</label>
-                  <select name="cadence" defaultValue={editingItem?.cadence || 'monthly'} className="w-full px-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl text-[var(--fg-primary)] font-medium appearance-none">
+                  <select
+                    name="cadence"
+                    value={cadenceVal}
+                    onChange={e => setCadenceVal(e.target.value)}
+                    className="w-full px-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl text-[var(--fg-primary)] font-medium appearance-none"
+                  >
                     <option value="weekly">Ogni Settimana</option>
                     <option value="monthly">Ogni Mese</option>
                     <option value="yearly">Ogni Anno</option>
@@ -327,16 +402,26 @@ export default function RecurringManager({ items, categories, accounts }: Recurr
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest ml-1">Prima data *</label>
-                  <input name="nextDate" type="date" defaultValue={editingItem ? new Date(editingItem.nextDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]} required className="w-full px-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl text-[var(--fg-primary)]" />
+                  <input
+                    name="nextDate"
+                    type="date"
+                    value={nextDateVal}
+                    onChange={e => setNextDateVal(e.target.value)}
+                    required
+                    className="w-full px-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl text-[var(--fg-primary)]"
+                  />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest ml-1">Data fine <span className="normal-case font-medium text-[var(--fg-muted)]">(opzionale — lascia vuoto per ricorrenza infinita)</span></label>
+                <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest ml-1">
+                  Data fine <span className="normal-case font-medium text-[var(--fg-muted)]">(opzionale — calcolata automaticamente se inserisci l'importo totale)</span>
+                </label>
                 <input
                   name="endDate"
                   type="date"
-                  defaultValue={(editingItem as any)?.endDate ? new Date((editingItem as any).endDate).toISOString().split('T')[0] : ''}
+                  value={endDateVal}
+                  onChange={e => { setEndDateVal(e.target.value); setTotalAmountVal('') }}
                   className="w-full px-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl text-[var(--fg-primary)]"
                 />
               </div>

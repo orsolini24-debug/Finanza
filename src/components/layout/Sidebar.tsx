@@ -58,7 +58,7 @@ export default function Sidebar() {
   const monthParam = searchParams.get('month');
 
   const sidebarContent = (
-    <div className="flex flex-col h-full py-6 px-4">
+    <div className="flex flex-col h-full min-h-0 py-6 px-4">
       {/* Brand Logo */}
       <div className="flex items-center gap-3.5 px-3 mb-12">
         <div className="w-11 h-11 bg-gradient-to-br from-[var(--accent)] to-[#0ec48e] rounded-[1.2rem] flex items-center justify-center shadow-[0_8px_20px_-4px_var(--glow-accent)] relative overflow-hidden group">
@@ -72,7 +72,7 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 custom-scrollbar overflow-y-auto pr-1 text-left">
+      <nav className="flex-1 min-h-0 space-y-1 custom-scrollbar overflow-y-auto pr-1 text-left">
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/app/dashboard' && pathname.startsWith(item.href));
           const href = monthParam ? `${item.href}?month=${monthParam}` : item.href;

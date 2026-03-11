@@ -83,19 +83,21 @@ export default function Sidebar() {
               <Link
                 href={href}
                 className={cn(
-                  "flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group w-full outline-none",
+                  "flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group w-full outline-none border",
                   isActive
-                    ? "bg-[var(--accent-dim)] text-[var(--accent)] shadow-[inset_0_0_0_1px_rgba(16,217,160,0.1)]"
-                    : "text-[var(--fg-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--fg-primary)]"
+                    ? "bg-[var(--accent-dim)] text-[var(--accent)] border-[var(--sidebar-active-border)] shadow-sm"
+                    : "text-[var(--fg-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--fg-primary)] border-transparent hover:border-[var(--sidebar-border)]"
                 )}
               >
                 <div className={cn(
-                  "w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300",
-                  isActive ? "bg-[var(--accent)] text-[var(--accent-on)] shadow-lg" : "bg-transparent group-hover:bg-[var(--bg-surface)] group-hover:shadow-sm"
+                  "w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 border",
+                  isActive 
+                    ? "bg-[var(--accent)] text-[var(--accent-on)] border-[var(--accent)] shadow-lg" 
+                    : "bg-transparent group-hover:bg-[var(--bg-surface)] border-transparent group-hover:border-[var(--sidebar-border)] group-hover:shadow-sm"
                 )}>
                   <Icon size={18} strokeWidth={isActive ? 2.5 : 2} className={cn("transition-transform", isActive ? "scale-100" : "group-hover:scale-110")} />
                 </div>
-                <span className={cn("text-[13px] font-bold tracking-tight transition-colors", isActive ? "text-[var(--fg-primary)]" : "text-[var(--fg-muted)] group-hover:text-[var(--fg-primary)]")}>
+                <span className={cn("text-[13px] font-black tracking-tight transition-colors", isActive ? "text-[var(--fg-primary)]" : "text-[var(--fg-muted)] group-hover:text-[var(--fg-primary)]")}>
                   {item.name}
                 </span>
                 {isActive && (

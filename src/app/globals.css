@@ -2,409 +2,19 @@
 @import "tailwindcss";
 
 /* ============================================================
-   TEMA 1 — OBSIDIAN (Default Dark)
-   Ispirato a: GitHub dark, Linear, Stripe Dashboard
-   Palette Bloomberg Terminal moderna. Teal su nero OLED.
+   ██████████████████████████████████████████████████████████
+   SISTEMA TEMI PREMIUM v2.1 — LEGIBILITÀ E CONTRASTO MASSIMO
+   Design philosophy: Stripe · Linear · Vercel · Arc Browser
+   Ogni tema è stato calibrato per il massimo contrasto visivo.
+   ██████████████████████████████████████████████████████████
+   ============================================================ */
+
+/* ============================================================
+   T1 — OBSIDIAN (Default Dark)
    ============================================================ */
 :root,
 [data-theme="obsidian"],
-[data-theme="dark"] {
-  --bg-base:    #0D1117;
-  --bg-surface: #161B22;
-  --bg-elevated:#1C2333;
-  --bg-input:   #0A0D13;
-  --bg-sidebar: #0D1117;
-
-  --border-subtle:  rgba(255,255,255,0.05);
-  --border-default: rgba(255,255,255,0.09);
-  --border-strong:  rgba(255,255,255,0.18);
-
-  --fg-primary: #E6EDF3;
-  --fg-muted:   #8B949E;
-  --fg-subtle:  #484F58;
-
-  --accent:       #1DB9A6;
-  --accent-hover: #18A897;
-  --accent-dim:   rgba(29,185,166,0.10);
-  --accent-on:    #021A16;
-
-  --income:      #4ADE80;
-  --income-dim:  rgba(74,222,128,0.08);
-  --expense:     #F87171;
-  --expense-dim: rgba(248,113,113,0.08);
-  --warning:     #FBBF24;
-  --warning-dim: rgba(251,191,36,0.08);
-  --info:        #60A5FA;
-  --info-dim:    rgba(96,165,250,0.08);
-
-  --glow-accent:   rgba(29,185,166,0.18);
-  --glow-expense:  rgba(248,113,113,0.15);
-
-  --shadow-sm:   0 1px 2px rgba(0,0,0,0.6);
-  --shadow-md:   0 8px 24px -4px rgba(0,0,0,0.7);
-  --shadow-lg:   0 20px 60px -8px rgba(0,0,0,0.8);
-  --shadow-glow: 0 0 32px var(--glow-accent);
-
-  --background: var(--bg-base);
-  --foreground: var(--fg-primary);
-}
-
-/* ============================================================
-   TEMA 2 — MIDNIGHT SAPPHIRE (Dark Corporate)
-   Ispirato a: Robinhood dark, Coinbase Pro, Klarna dark
-   Navy profondo + Electric Blue. Credibilità bancaria premium.
-   ============================================================ */
-[data-theme="sapphire"],
-[data-theme="midnight-neon"] {
-  --bg-base:    #070D1A;
-  --bg-surface: #0D1929;
-  --bg-elevated:#152235;
-  --bg-input:   #050B14;
-  --bg-sidebar: #060C18;
-
-  --border-subtle:  rgba(59,139,245,0.07);
-  --border-default: rgba(59,139,245,0.14);
-  --border-strong:  rgba(59,139,245,0.28);
-
-  --fg-primary: #F1F5F9;
-  --fg-muted:   #7A8BA8;
-  --fg-subtle:  #3D5270;
-
-  --accent:       #3B8BF5;
-  --accent-hover: #2B78E0;
-  --accent-dim:   rgba(59,139,245,0.12);
-  --accent-on:    #F1F5F9;
-
-  --income:      #22C55E;
-  --income-dim:  rgba(34,197,94,0.09);
-  --expense:     #F43F5E;
-  --expense-dim: rgba(244,63,94,0.09);
-  --warning:     #F59E0B;
-  --warning-dim: rgba(245,158,11,0.09);
-  --info:        #38BDF8;
-  --info-dim:    rgba(56,189,248,0.09);
-
-  --glow-accent:  rgba(59,139,245,0.25);
-  --glow-expense: rgba(244,63,94,0.18);
-
-  --shadow-sm:   0 1px 2px rgba(0,0,0,0.7);
-  --shadow-md:   0 8px 24px -4px rgba(0,5,20,0.8);
-  --shadow-lg:   0 20px 60px -8px rgba(0,5,20,0.9);
-  --shadow-glow: 0 0 40px var(--glow-accent);
-
-  --background: var(--bg-base);
-  --foreground: var(--fg-primary);
-}
-
-/* ============================================================
-   TEMA 3 — AUTO (Segue sistema operativo)
-   Di giorno: Cloud Dancer (Pantone 2026) — bianco latteo caldo
-   Di notte:  Obsidian — nero OLED con teal
-   ============================================================ */
-[data-theme="auto"] {
-  /* Default LIGHT (Cloud Dancer — Pantone 2026) */
-  --bg-base:    #F7F5F2;
-  --bg-surface: #FDFCFB;
-  --bg-elevated:#EDEAE6;
-  --bg-input:   #F2F0ED;
-  --bg-sidebar: #1C2333;
-
-  --border-subtle:  rgba(0,0,0,0.05);
-  --border-default: rgba(0,0,0,0.09);
-  --border-strong:  rgba(0,0,0,0.18);
-
-  --fg-primary: #111827;
-  --fg-muted:   #6B7280;
-  --fg-subtle:  #9CA3AF;
-
-  --accent:       #2563EB;
-  --accent-hover: #1D4ED8;
-  --accent-dim:   rgba(37,99,235,0.08);
-  --accent-on:    #FFFFFF;
-
-  --income:      #059669;
-  --income-dim:  rgba(5,150,105,0.07);
-  --expense:     #DC2626;
-  --expense-dim: rgba(220,38,38,0.07);
-  --warning:     #D97706;
-  --warning-dim: rgba(217,119,6,0.07);
-  --info:        #2563EB;
-  --info-dim:    rgba(37,99,235,0.07);
-
-  --glow-accent:  rgba(37,99,235,0.12);
-  --glow-expense: rgba(220,38,38,0.10);
-
-  --shadow-sm:   0 1px 3px rgba(0,0,0,0.06);
-  --shadow-md:   0 4px 16px rgba(0,0,0,0.09);
-  --shadow-lg:   0 16px 40px rgba(0,0,0,0.12);
-  --shadow-glow: 0 0 24px var(--glow-accent);
-
-  --background: var(--bg-base);
-  --foreground: var(--fg-primary);
-}
-
-@media (prefers-color-scheme: dark) {
-  [data-theme="auto"] {
-    --bg-base:    #0D1117;
-    --bg-surface: #161B22;
-    --bg-elevated:#1C2333;
-    --bg-input:   #0A0D13;
-    --bg-sidebar: #0D1117;
-
-    --border-subtle:  rgba(255,255,255,0.05);
-    --border-default: rgba(255,255,255,0.09);
-    --border-strong:  rgba(255,255,255,0.18);
-
-    --fg-primary: #E6EDF3;
-    --fg-muted:   #8B949E;
-    --fg-subtle:  #484F58;
-
-    --accent:       #1DB9A6;
-    --accent-hover: #18A897;
-    --accent-dim:   rgba(29,185,166,0.10);
-    --accent-on:    #021A16;
-
-    --income:      #4ADE80;
-    --income-dim:  rgba(74,222,128,0.08);
-    --expense:     #F87171;
-    --expense-dim: rgba(248,113,113,0.08);
-    --warning:     #FBBF24;
-    --warning-dim: rgba(251,191,36,0.08);
-    --info:        #60A5FA;
-    --info-dim:    rgba(96,165,250,0.08);
-
-    --glow-accent:  rgba(29,185,166,0.18);
-    --glow-expense: rgba(248,113,113,0.15);
-
-    --shadow-sm:   0 1px 2px rgba(0,0,0,0.6);
-    --shadow-md:   0 8px 24px -4px rgba(0,0,0,0.7);
-    --shadow-lg:   0 20px 60px -8px rgba(0,0,0,0.8);
-    --shadow-glow: 0 0 32px var(--glow-accent);
-
-    --background: var(--bg-base);
-    --foreground: var(--fg-primary);
-  }
-}
-
-/* ============================================================
-   TEMA 4 — EVERGREEN (Biophilic Dark)
-   Ispirato a: design sostenibile 2026, nature-first
-   Verde muschio / foresta. Unico nel fintech — differenziante.
-   ============================================================ */
-[data-theme="evergreen"],
-[data-theme="zen-garden"] {
-  --bg-base:    #111810;
-  --bg-surface: #192016;
-  --bg-elevated:#21291C;
-  --bg-input:   #0C1109;
-  --bg-sidebar: #0C1109;
-
-  --border-subtle:  rgba(123,160,91,0.08);
-  --border-default: rgba(123,160,91,0.15);
-  --border-strong:  rgba(123,160,91,0.28);
-
-  --fg-primary: #EDE8DF;
-  --fg-muted:   #A89880;
-  --fg-subtle:  #6B5E50;
-
-  --accent:       #7BA05B;
-  --accent-hover: #6A8F4A;
-  --accent-dim:   rgba(123,160,91,0.12);
-  --accent-on:    #0C1109;
-
-  --income:      #5DA44E;
-  --income-dim:  rgba(93,164,78,0.10);
-  --expense:     #C0623A;
-  --expense-dim: rgba(192,98,58,0.10);
-  --warning:     #DAA520;
-  --warning-dim: rgba(218,165,32,0.10);
-  --info:        #5F9EA0;
-  --info-dim:    rgba(95,158,160,0.10);
-
-  --glow-accent:  rgba(123,160,91,0.22);
-  --glow-expense: rgba(192,98,58,0.18);
-
-  --shadow-sm:   0 1px 2px rgba(0,0,0,0.5);
-  --shadow-md:   0 8px 24px -4px rgba(0,0,0,0.6);
-  --shadow-lg:   0 20px 60px -8px rgba(0,0,0,0.7);
-  --shadow-glow: 0 0 32px var(--glow-accent);
-
-  --background: var(--bg-base);
-  --foreground: var(--fg-primary);
-}
-
-/* ============================================================
-   TEMA 5 — AURORA (Gradient Borealis)
-   Ispirato a: Stripe, Linear, Vercel, Arc Browser — 2026 trend
-   Glow teal/violet su space black. Innovativo nel fintech.
-   ============================================================ */
-[data-theme="aurora"],
-[data-theme="cyberpunk"] {
-  --bg-base:    #080B14;
-  --bg-surface: #0D1225;
-  --bg-elevated:#131B35;
-  --bg-input:   #060910;
-  --bg-sidebar: #080B14;
-
-  --border-subtle:  rgba(45,212,191,0.07);
-  --border-default: rgba(45,212,191,0.13);
-  --border-strong:  rgba(45,212,191,0.25);
-
-  --fg-primary: #E2E8F0;
-  --fg-muted:   #94A3B8;
-  --fg-subtle:  #4B5563;
-
-  --accent:       #2DD4BF;
-  --accent-hover: #14B8A6;
-  --accent-dim:   rgba(45,212,191,0.12);
-  --accent-on:    #042A27;
-
-  /* Aurora secondary — usato per glow card e grafici */
-  --aurora-violet: #8B5CF6;
-  --aurora-blue:   #3B82F6;
-  --aurora-green:  #34D399;
-
-  --income:      #34D399;
-  --income-dim:  rgba(52,211,153,0.09);
-  --expense:     #F87171;
-  --expense-dim: rgba(248,113,113,0.09);
-  --warning:     #FBBF24;
-  --warning-dim: rgba(251,191,36,0.09);
-  --info:        #60A5FA;
-  --info-dim:    rgba(96,165,250,0.09);
-
-  --glow-accent:  rgba(45,212,191,0.22);
-  --glow-expense: rgba(248,113,113,0.16);
-
-  --shadow-sm:   0 1px 2px rgba(0,0,0,0.7);
-  --shadow-md:   0 8px 24px -4px rgba(0,0,0,0.8);
-  --shadow-lg:   0 20px 60px -8px rgba(0,0,0,0.9);
-  --shadow-glow: 0 0 40px var(--glow-accent);
-
-  --background: var(--bg-base);
-  --foreground: var(--fg-primary);
-}
-
-/* ============================================================
-   TEMA 6 — CLOUD DANCER (Light Professionale)
-   Pantone Color of the Year 2026 — bianco latteo caldo
-   Ispirato a: Mercury Bank, Brex, Apple Card dashboard
-   ============================================================ */
-[data-theme="cloud"],
-[data-theme="light"] {
-  --bg-base:    #F7F5F2;
-  --bg-surface: #FDFCFB;
-  --bg-elevated:#EDEAE6;
-  --bg-input:   #F2F0ED;
-  --bg-sidebar: #1C2333;
-
-  --border-subtle:  rgba(0,0,0,0.05);
-  --border-default: rgba(0,0,0,0.09);
-  --border-strong:  rgba(0,0,0,0.18);
-
-  --fg-primary: #111827;
-  --fg-muted:   #6B7280;
-  --fg-subtle:  #9CA3AF;
-
-  --accent:       #1D4ED8;
-  --accent-hover: #1E40AF;
-  --accent-dim:   rgba(29,78,216,0.08);
-  --accent-on:    #FFFFFF;
-
-  --income:      #059669;
-  --income-dim:  rgba(5,150,105,0.07);
-  --expense:     #DC2626;
-  --expense-dim: rgba(220,38,38,0.07);
-  --warning:     #D97706;
-  --warning-dim: rgba(217,119,6,0.07);
-  --info:        #1D4ED8;
-  --info-dim:    rgba(29,78,216,0.07);
-
-  --glow-accent:  rgba(29,78,216,0.12);
-  --glow-expense: rgba(220,38,38,0.10);
-
-  --shadow-sm:   0 1px 3px rgba(0,0,0,0.06);
-  --shadow-md:   0 4px 16px rgba(0,0,0,0.09);
-  --shadow-lg:   0 16px 40px rgba(0,0,0,0.12);
-  --shadow-glow: 0 0 24px var(--glow-accent);
-
-  --background: var(--bg-base);
-  --foreground: var(--fg-primary);
-}
-
-/* ============================================================
-   BODY — Background gradients per tema
-   ============================================================ */
-body {
-  font-family: var(--font-inter), system-ui, sans-serif;
-  background-color: var(--bg-base);
-  color: var(--fg-primary);
-  background-image:
-    radial-gradient(ellipse at 15% 10%, rgba(29,185,166,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 85% 90%, rgba(96,165,250,0.03) 0%, transparent 50%);
-  background-attachment: fixed;
-  min-height: 100vh;
-  letter-spacing: -0.01em;
-  -webkit-font-smoothing: antialiased;
-}
-
-[data-theme="sapphire"] body {
-  background-image:
-    radial-gradient(ellipse at 20% 10%, rgba(59,139,245,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 90%, rgba(56,189,248,0.04) 0%, transparent 50%);
-}
-
-[data-theme="auto"] body {
-  background-image:
-    radial-gradient(ellipse at 15% 10%, rgba(37,99,235,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 85% 90%, rgba(5,150,105,0.03) 0%, transparent 50%);
-}
-
-@media (prefers-color-scheme: dark) {
-  [data-theme="auto"] body {
-    background-image:
-      radial-gradient(ellipse at 15% 10%, rgba(29,185,166,0.04) 0%, transparent 50%),
-      radial-gradient(ellipse at 85% 90%, rgba(96,165,250,0.03) 0%, transparent 50%);
-  }
-}
-
-[data-theme="evergreen"] body,
-[data-theme="zen-garden"] body {
-  background-image:
-    radial-gradient(ellipse at 15% 10%, rgba(123,160,91,0.05) 0%, transparent 50%),
-    radial-gradient(ellipse at 85% 90%, rgba(95,158,160,0.04) 0%, transparent 50%);
-}
-
-/* Aurora — effetto aurora borealis animata */
-[data-theme="aurora"] body,
-[data-theme="cyberpunk"] body {
-  background-image:
-    radial-gradient(ellipse at 20% 20%, rgba(45,212,191,0.08) 0%, transparent 45%),
-    radial-gradient(ellipse at 80% 80%, rgba(139,92,246,0.07) 0%, transparent 45%),
-    radial-gradient(ellipse at 60% 40%, rgba(59,130,246,0.05) 0%, transparent 40%);
-  background-attachment: fixed;
-}
-
-[data-theme="cloud"] body,
-[data-theme="light"] body {
-  background-image:
-    radial-gradient(ellipse at 15% 10%, rgba(29,78,216,0.03) 0%, transparent 50%),
-    radial-gradient(ellipse at 85% 90%, rgba(5,150,105,0.02) 0%, transparent 50%);
-}
-
-/* ============================================================
-   ██████████████████████████████████████████████████████████
-   SISTEMA TEMI PREMIUM v2.0 — 10 TEMI × DARK + LIGHT = 20
-   Design philosophy: Stripe · Linear · Vercel · Arc Browser
-   Ogni tema: WCAG AA (contrasto ≥ 4.5:1 su testo normale)
-   ██████████████████████████████████████████████████████████
-   ============================================================ */
-
-/* ============================================================
-   T1 — OBSIDIAN PREMIUM (Dark)
-   Aggiornamento del default: glow angoli più precisi, teal OLED
-   Ispirato a: GitHub dark, Linear, Bloomberg Terminal 2026
-   ============================================================ */
+[data-theme="dark"],
 [data-theme="obsidian-dark"] {
   --bg-base:     #090D12;
   --bg-surface:  #111620;
@@ -416,9 +26,12 @@ body {
   --border-default: rgba(255,255,255,0.08);
   --border-strong:  rgba(255,255,255,0.16);
 
-  --fg-primary: #E8EEF4;
-  --fg-muted:   #8A97A8;
-  --fg-subtle:  #3E4A58;
+  --fg-primary: #FFFFFF;
+  --fg-muted:   #94A3B8;
+  --fg-subtle:  #64748B;
+
+  --sidebar-border: rgba(255,255,255,0.08);
+  --sidebar-active-border: rgba(29,185,166,0.4);
 
   --accent:       #1DB9A6;
   --accent-hover: #17A595;
@@ -446,1034 +59,579 @@ body {
   --foreground: var(--fg-primary);
 }
 
-/* ── OBSIDIAN (Light) ── */
 [data-theme="obsidian-light"] {
   --bg-base:     #F4F6F8;
   --bg-surface:  #FAFBFC;
   --bg-elevated: #EAECF0;
   --bg-input:    #EEF0F3;
   --bg-sidebar:  #1A2230;
-
   --border-subtle:  rgba(0,0,0,0.05);
   --border-default: rgba(0,0,0,0.09);
   --border-strong:  rgba(0,0,0,0.18);
-
-  --fg-primary: #0F1923;
-  --fg-muted:   #5A6878;
-  --fg-subtle:  #9AA5B4;
-
+  --fg-primary: #0F172A;
+  --fg-muted:   #475569;
+  --fg-subtle:  #94A3B8;
+  --sidebar-border: rgba(0,0,0,0.08);
+  --sidebar-active-border: rgba(15,160,144,0.3);
   --accent:       #0FA090;
   --accent-hover: #0B897B;
   --accent-dim:   rgba(15,160,144,0.09);
   --accent-on:    #FFFFFF;
-
   --income:      #059669;
-  --income-dim:  rgba(5,150,105,0.08);
   --expense:     #DC2626;
-  --expense-dim: rgba(220,38,38,0.08);
-  --warning:     #D97706;
-  --warning-dim: rgba(217,119,6,0.08);
-  --info:        #2563EB;
-  --info-dim:    rgba(37,99,235,0.08);
-
-  --glow-accent:  rgba(15,160,144,0.12);
-  --glow-expense: rgba(220,38,38,0.10);
-
-  --shadow-sm:   0 1px 3px rgba(0,0,0,0.06);
-  --shadow-md:   0 4px 16px rgba(0,0,0,0.09);
-  --shadow-lg:   0 16px 40px rgba(0,0,0,0.11);
-  --shadow-glow: 0 0 24px var(--glow-accent);
-
   --background: var(--bg-base);
   --foreground: var(--fg-primary);
 }
 
 /* ============================================================
-   T2 — MIDNIGHT SAPPHIRE PREMIUM (Dark)
-   Navy abissale + electric blue. Ispirato: Coinbase, Klarna
+   T2 — MIDNIGHT SAPPHIRE
    ============================================================ */
+[data-theme="sapphire"],
+[data-theme="midnight-neon"],
 [data-theme="sapphire-dark"] {
   --bg-base:     #050A16;
   --bg-surface:  #0A1428;
   --bg-elevated: #111D38;
   --bg-input:    #040812;
   --bg-sidebar:  #050A16;
-
   --border-subtle:  rgba(59,139,245,0.06);
   --border-default: rgba(59,139,245,0.12);
   --border-strong:  rgba(59,139,245,0.26);
-
-  --fg-primary: #EEF2FA;
-  --fg-muted:   #7A8FAD;
-  --fg-subtle:  #334466;
-
+  --fg-primary: #FFFFFF;
+  --fg-muted:   #94A3B8;
+  --fg-subtle:  #64748B;
+  --sidebar-border: rgba(255,255,255,0.08);
+  --sidebar-active-border: rgba(59,139,245,0.5);
   --accent:       #3B8BF5;
   --accent-hover: #2B79E0;
   --accent-dim:   rgba(59,139,245,0.12);
   --accent-on:    #F0F6FF;
-
   --income:      #22C55E;
-  --income-dim:  rgba(34,197,94,0.09);
   --expense:     #F43F5E;
-  --expense-dim: rgba(244,63,94,0.09);
-  --warning:     #F59E0B;
-  --warning-dim: rgba(245,158,11,0.09);
-  --info:        #38BDF8;
-  --info-dim:    rgba(56,189,248,0.09);
-
-  --glow-accent:  rgba(59,139,245,0.28);
-  --glow-expense: rgba(244,63,94,0.18);
-
-  --shadow-sm:   0 1px 2px rgba(0,2,15,0.80);
-  --shadow-md:   0 8px 24px -4px rgba(0,2,20,0.85);
-  --shadow-lg:   0 20px 60px -8px rgba(0,2,20,0.95);
-  --shadow-glow: 0 0 44px var(--glow-accent);
-
   --background: var(--bg-base);
   --foreground: var(--fg-primary);
 }
 
-/* ── MIDNIGHT SAPPHIRE (Light) ── */
 [data-theme="sapphire-light"] {
   --bg-base:     #F0F4FE;
   --bg-surface:  #FAFBFF;
   --bg-elevated: #E4EAFB;
   --bg-input:    #ECF0FC;
   --bg-sidebar:  #0F1E40;
-
   --border-subtle:  rgba(37,99,235,0.06);
   --border-default: rgba(37,99,235,0.12);
   --border-strong:  rgba(37,99,235,0.24);
-
-  --fg-primary: #0D1A35;
-  --fg-muted:   #4A6080;
-  --fg-subtle:  #8DA4C8;
-
+  --fg-primary: #0F172A;
+  --fg-muted:   #475569;
+  --fg-subtle:  #94A3B8;
+  --sidebar-border: rgba(0,0,0,0.08);
+  --sidebar-active-border: rgba(29,91,204,0.3);
   --accent:       #1D5BCC;
   --accent-hover: #1649B0;
   --accent-dim:   rgba(29,91,204,0.09);
   --accent-on:    #FFFFFF;
-
   --income:      #0D7A4A;
-  --income-dim:  rgba(13,122,74,0.08);
   --expense:     #C0152A;
-  --expense-dim: rgba(192,21,42,0.08);
-  --warning:     #C17E00;
-  --warning-dim: rgba(193,126,0,0.08);
-  --info:        #1D5BCC;
-  --info-dim:    rgba(29,91,204,0.08);
-
-  --glow-accent:  rgba(29,91,204,0.14);
-  --glow-expense: rgba(192,21,42,0.10);
-
-  --shadow-sm:   0 1px 3px rgba(0,0,0,0.06);
-  --shadow-md:   0 4px 16px rgba(13,30,60,0.09);
-  --shadow-lg:   0 16px 40px rgba(13,30,60,0.12);
-  --shadow-glow: 0 0 24px var(--glow-accent);
-
   --background: var(--bg-base);
   --foreground: var(--fg-primary);
 }
 
 /* ============================================================
-   T3 — AURORA BOREALIS PREMIUM (Dark)
-   Space black con flusso teal+violet+green. 2026 hero theme.
-   Ispirato a: Stripe gradient, Arc Browser sidebar, Linear.
+   T3 — AURORA BOREALIS
    ============================================================ */
+[data-theme="aurora"],
 [data-theme="aurora-dark"] {
   --bg-base:     #070A14;
   --bg-surface:  #0C1126;
   --bg-elevated: #121A38;
   --bg-input:    #050810;
   --bg-sidebar:  #070A14;
-
   --border-subtle:  rgba(45,212,191,0.07);
   --border-default: rgba(45,212,191,0.13);
   --border-strong:  rgba(45,212,191,0.26);
-
-  --fg-primary: #E0E8F2;
-  --fg-muted:   #8FA0BC;
-  --fg-subtle:  #3E506A;
-
-  /* Aurora multi-color — colori secondari accessibili globalmente */
-  --aurora-teal:   #2DD4BF;
-  --aurora-violet: #A78BFA;
-  --aurora-green:  #34D399;
-
+  --fg-primary: #FFFFFF;
+  --fg-muted:   #94A3B8;
+  --fg-subtle:  #64748B;
+  --sidebar-border: rgba(255,255,255,0.08);
+  --sidebar-active-border: rgba(45,212,191,0.5);
   --accent:       #2DD4BF;
   --accent-hover: #19B8A3;
   --accent-dim:   rgba(45,212,191,0.12);
   --accent-on:    #032220;
-
   --income:      #34D399;
-  --income-dim:  rgba(52,211,153,0.09);
   --expense:     #F87171;
-  --expense-dim: rgba(248,113,113,0.09);
-  --warning:     #FBBF24;
-  --warning-dim: rgba(251,191,36,0.09);
-  --info:        #818CF8;
-  --info-dim:    rgba(129,140,248,0.09);
-
-  --glow-accent:  rgba(45,212,191,0.24);
-  --glow-expense: rgba(248,113,113,0.16);
-
-  --shadow-sm:   0 1px 2px rgba(0,0,0,0.75);
-  --shadow-md:   0 8px 24px -4px rgba(0,0,0,0.85);
-  --shadow-lg:   0 20px 60px -8px rgba(0,0,0,0.92);
-  --shadow-glow: 0 0 48px var(--glow-accent);
-
   --background: var(--bg-base);
   --foreground: var(--fg-primary);
 }
 
-/* ── AURORA BOREALIS (Light) ── */
 [data-theme="aurora-light"] {
   --bg-base:     #F2F8F7;
   --bg-surface:  #FAFFFE;
   --bg-elevated: #E4F3F0;
   --bg-input:    #EDF8F6;
   --bg-sidebar:  #102A28;
-
   --border-subtle:  rgba(13,160,144,0.06);
   --border-default: rgba(13,160,144,0.12);
   --border-strong:  rgba(13,160,144,0.24);
-
-  --fg-primary: #0D1F1D;
-  --fg-muted:   #3D6460;
-  --fg-subtle:  #7AADA8;
-
-  --aurora-teal:   #0D9488;
-  --aurora-violet: #7C3AED;
-  --aurora-green:  #059669;
-
+  --fg-primary: #0F172A;
+  --fg-muted:   #475569;
+  --fg-subtle:  #94A3B8;
+  --sidebar-border: rgba(0,0,0,0.08);
+  --sidebar-active-border: rgba(13,148,136,0.3);
   --accent:       #0D9488;
   --accent-hover: #0A7A6E;
   --accent-dim:   rgba(13,148,136,0.09);
   --accent-on:    #FFFFFF;
-
   --income:      #047857;
-  --income-dim:  rgba(4,120,87,0.08);
   --expense:     #B91C1C;
-  --expense-dim: rgba(185,28,28,0.08);
-  --warning:     #B45309;
-  --warning-dim: rgba(180,83,9,0.08);
-  --info:        #4338CA;
-  --info-dim:    rgba(67,56,202,0.08);
-
-  --glow-accent:  rgba(13,148,136,0.14);
-  --glow-expense: rgba(185,28,28,0.10);
-
-  --shadow-sm:   0 1px 3px rgba(0,0,0,0.06);
-  --shadow-md:   0 4px 16px rgba(0,30,28,0.09);
-  --shadow-lg:   0 16px 40px rgba(0,30,28,0.12);
-  --shadow-glow: 0 0 24px var(--glow-accent);
-
   --background: var(--bg-base);
   --foreground: var(--fg-primary);
 }
 
 /* ============================================================
-   T4 — SUNSET DUSK (Dark)
-   Viola notte + gradient warm. Tramonto su oceano profondo.
-   Ispirato a: Airbnb evening mode, premium travel apps 2026.
+   T4 — SUNSET DUSK
    ============================================================ */
+[data-theme="sunset"],
 [data-theme="sunset-dark"] {
   --bg-base:     #0F0A14;
   --bg-surface:  #1A1025;
   --bg-elevated: #231535;
   --bg-input:    #0C0810;
   --bg-sidebar:  #0F0A14;
-
   --border-subtle:  rgba(251,113,133,0.07);
   --border-default: rgba(251,113,133,0.13);
   --border-strong:  rgba(251,113,133,0.26);
-
-  --fg-primary: #F5EEF8;
-  --fg-muted:   #9E8AAE;
-  --fg-subtle:  #4A3A5A;
-
+  --fg-primary: #FFFFFF;
+  --fg-muted:   #94A3B8;
+  --fg-subtle:  #64748B;
+  --sidebar-border: rgba(255,255,255,0.08);
+  --sidebar-active-border: rgba(249,115,22,0.5);
   --accent:       #F97316;
   --accent-hover: #EA6A0C;
   --accent-dim:   rgba(249,115,22,0.12);
   --accent-on:    #1A0A00;
-
   --income:      #4ADE80;
-  --income-dim:  rgba(74,222,128,0.08);
   --expense:     #FB7185;
-  --expense-dim: rgba(251,113,133,0.08);
-  --warning:     #FCD34D;
-  --warning-dim: rgba(252,211,77,0.08);
-  --info:        #C084FC;
-  --info-dim:    rgba(192,132,252,0.08);
-
-  --glow-accent:  rgba(249,115,22,0.26);
-  --glow-expense: rgba(251,113,133,0.18);
-
-  --shadow-sm:   0 1px 2px rgba(10,0,20,0.80);
-  --shadow-md:   0 8px 24px -4px rgba(10,0,20,0.85);
-  --shadow-lg:   0 20px 60px -8px rgba(10,0,20,0.92);
-  --shadow-glow: 0 0 44px var(--glow-accent);
-
   --background: var(--bg-base);
   --foreground: var(--fg-primary);
 }
 
-/* ── SUNSET DUSK (Light) ── */
 [data-theme="sunset-light"] {
   --bg-base:     #FFF8F4;
   --bg-surface:  #FFFDFB;
   --bg-elevated: #FCEEE5;
   --bg-input:    #FBF0E8;
   --bg-sidebar:  #2A1008;
-
   --border-subtle:  rgba(234,88,12,0.07);
   --border-default: rgba(234,88,12,0.13);
   --border-strong:  rgba(234,88,12,0.26);
-
   --fg-primary: #1C0A04;
   --fg-muted:   #7A4830;
   --fg-subtle:  #BFA090;
-
+  --sidebar-border: rgba(0,0,0,0.08);
+  --sidebar-active-border: rgba(234,88,12,0.3);
   --accent:       #EA580C;
   --accent-hover: #C2460A;
   --accent-dim:   rgba(234,88,12,0.09);
   --accent-on:    #FFFFFF;
-
   --income:      #15803D;
-  --income-dim:  rgba(21,128,61,0.08);
   --expense:     #BE123C;
-  --expense-dim: rgba(190,18,60,0.08);
-  --warning:     #92400E;
-  --warning-dim: rgba(146,64,14,0.08);
-  --info:        #7E22CE;
-  --info-dim:    rgba(126,34,206,0.08);
-
-  --glow-accent:  rgba(234,88,12,0.14);
-  --glow-expense: rgba(190,18,60,0.10);
-
-  --shadow-sm:   0 1px 3px rgba(30,10,0,0.07);
-  --shadow-md:   0 4px 16px rgba(30,10,0,0.10);
-  --shadow-lg:   0 16px 40px rgba(30,10,0,0.13);
-  --shadow-glow: 0 0 24px var(--glow-accent);
-
   --background: var(--bg-base);
   --foreground: var(--fg-primary);
 }
 
 /* ============================================================
-   T5 — EMERALD FOREST PREMIUM (Dark)
-   Verde foresta + muschio. Biophilic dark 2026.
-   Ispirato a: Notion Earth, Raindrop, design sostenibile.
+   T5 — EMERALD FOREST (Zen Garden)
    ============================================================ */
+[data-theme="forest"],
+[data-theme="zen-garden"],
 [data-theme="forest-dark"] {
   --bg-base:     #090E09;
   --bg-surface:  #111810;
   --bg-elevated: #192118;
   --bg-input:    #070A07;
   --bg-sidebar:  #090E09;
-
   --border-subtle:  rgba(123,160,91,0.07);
   --border-default: rgba(123,160,91,0.14);
   --border-strong:  rgba(123,160,91,0.28);
-
-  --fg-primary: #E8F0DE;
-  --fg-muted:   #8FA87A;
-  --fg-subtle:  #3A4F30;
-
+  --fg-primary: #FFFFFF;
+  --fg-muted:   #94A3B8;
+  --fg-subtle:  #64748B;
+  --sidebar-border: rgba(255,255,255,0.08);
+  --sidebar-active-border: rgba(123,160,91,0.5);
   --accent:       #7BA05B;
   --accent-hover: #6A8F4A;
   --accent-dim:   rgba(123,160,91,0.12);
   --accent-on:    #08140A;
-
   --income:      #5DBF4E;
-  --income-dim:  rgba(93,191,78,0.09);
   --expense:     #D96040;
-  --expense-dim: rgba(217,96,64,0.09);
-  --warning:     #D4A827;
-  --warning-dim: rgba(212,168,39,0.09);
-  --info:        #5F9EA0;
-  --info-dim:    rgba(95,158,160,0.09);
-
-  --glow-accent:  rgba(123,160,91,0.24);
-  --glow-expense: rgba(217,96,64,0.18);
-
-  --shadow-sm:   0 1px 2px rgba(0,0,0,0.65);
-  --shadow-md:   0 8px 24px -4px rgba(0,0,0,0.72);
-  --shadow-lg:   0 20px 60px -8px rgba(0,0,0,0.82);
-  --shadow-glow: 0 0 36px var(--glow-accent);
-
   --background: var(--bg-base);
   --foreground: var(--fg-primary);
 }
 
-/* ── EMERALD FOREST (Light) ── */
 [data-theme="forest-light"] {
   --bg-base:     #F3F7EE;
   --bg-surface:  #FAFDF6;
   --bg-elevated: #E6EEE0;
   --bg-input:    #EEF4E8;
   --bg-sidebar:  #132010;
-
   --border-subtle:  rgba(74,114,44,0.07);
   --border-default: rgba(74,114,44,0.13);
   --border-strong:  rgba(74,114,44,0.26);
-
-  --fg-primary: #0D1C08;
-  --fg-muted:   #3E6030;
-  --fg-subtle:  #7EA870;
-
+  --fg-primary: #0F172A;
+  --fg-muted:   #475569;
+  --fg-subtle:  #94A3B8;
+  --sidebar-border: rgba(0,0,0,0.08);
+  --sidebar-active-border: rgba(74,122,40,0.3);
   --accent:       #4A7A28;
   --accent-hover: #3D6820;
   --accent-dim:   rgba(74,122,40,0.09);
   --accent-on:    #FFFFFF;
-
   --income:      #1A6B14;
-  --income-dim:  rgba(26,107,20,0.08);
   --expense:     #B83010;
-  --expense-dim: rgba(184,48,16,0.08);
-  --warning:     #8C6A00;
-  --warning-dim: rgba(140,106,0,0.08);
-  --info:        #1E6B72;
-  --info-dim:    rgba(30,107,114,0.08);
-
-  --glow-accent:  rgba(74,122,40,0.12);
-  --glow-expense: rgba(184,48,16,0.10);
-
-  --shadow-sm:   0 1px 3px rgba(0,0,0,0.06);
-  --shadow-md:   0 4px 16px rgba(8,20,4,0.09);
-  --shadow-lg:   0 16px 40px rgba(8,20,4,0.12);
-  --shadow-glow: 0 0 24px var(--glow-accent);
-
   --background: var(--bg-base);
   --foreground: var(--fg-primary);
 }
 
 /* ============================================================
-   T6 — ROSE GOLD (Dark)
-   Deep rosé + champagne gold. Luxury fintech premium.
-   Ispirato a: Apple Card, N26 premium, Revolut Metal.
+   T6 — ROSE GOLD
    ============================================================ */
+[data-theme="rosegold"],
 [data-theme="rosegold-dark"] {
   --bg-base:     #130A0D;
   --bg-surface:  #1E1118;
   --bg-elevated: #281622;
   --bg-input:    #0F080B;
   --bg-sidebar:  #130A0D;
-
   --border-subtle:  rgba(232,121,160,0.07);
   --border-default: rgba(232,121,160,0.14);
   --border-strong:  rgba(232,121,160,0.28);
-
-  --fg-primary: #F8EEF2;
-  --fg-muted:   #C09AAC;
-  --fg-subtle:  #5E3A4A;
-
+  --fg-primary: #FFFFFF;
+  --fg-muted:   #94A3B8;
+  --fg-subtle:  #64748B;
+  --sidebar-border: rgba(255,255,255,0.08);
+  --sidebar-active-border: rgba(232,121,160,0.5);
   --accent:       #E879A0;
   --accent-hover: #D6689E;
   --accent-dim:   rgba(232,121,160,0.12);
   --accent-on:    #1A0010;
-
   --income:      #D4A853;
-  --income-dim:  rgba(212,168,83,0.09);
   --expense:     #F87171;
-  --expense-dim: rgba(248,113,113,0.09);
-  --warning:     #FCD34D;
-  --warning-dim: rgba(252,211,77,0.09);
-  --info:        #C084FC;
-  --info-dim:    rgba(192,132,252,0.09);
-
-  --glow-accent:  rgba(232,121,160,0.26);
-  --glow-expense: rgba(248,113,113,0.18);
-
-  --shadow-sm:   0 1px 2px rgba(15,0,10,0.80);
-  --shadow-md:   0 8px 24px -4px rgba(15,0,10,0.85);
-  --shadow-lg:   0 20px 60px -8px rgba(15,0,10,0.92);
-  --shadow-glow: 0 0 44px var(--glow-accent);
-
   --background: var(--bg-base);
   --foreground: var(--fg-primary);
 }
 
-/* ── ROSE GOLD (Light) ── */
 [data-theme="rosegold-light"] {
   --bg-base:     #FFF5F8;
   --bg-surface:  #FFFAFC;
   --bg-elevated: #FAE8EF;
   --bg-input:    #FCEEF4;
   --bg-sidebar:  #280A16;
-
   --border-subtle:  rgba(190,30,90,0.06);
   --border-default: rgba(190,30,90,0.12);
   --border-strong:  rgba(190,30,90,0.24);
-
   --fg-primary: #1C0410;
   --fg-muted:   #7A3050;
   --fg-subtle:  #C48AAA;
-
+  --sidebar-border: rgba(0,0,0,0.08);
+  --sidebar-active-border: rgba(190,30,90,0.3);
   --accent:       #BE1E5A;
   --accent-hover: #A0184C;
   --accent-dim:   rgba(190,30,90,0.09);
   --accent-on:    #FFFFFF;
-
   --income:      #8B6914;
-  --income-dim:  rgba(139,105,20,0.08);
   --expense:     #B01035;
-  --expense-dim: rgba(176,16,53,0.08);
-  --warning:     #8B4500;
-  --warning-dim: rgba(139,69,0,0.08);
-  --info:        #6B21A8;
-  --info-dim:    rgba(107,33,168,0.08);
-
-  --glow-accent:  rgba(190,30,90,0.14);
-  --glow-expense: rgba(176,16,53,0.10);
-
-  --shadow-sm:   0 1px 3px rgba(30,0,15,0.07);
-  --shadow-md:   0 4px 16px rgba(30,0,15,0.10);
-  --shadow-lg:   0 16px 40px rgba(30,0,15,0.13);
-  --shadow-glow: 0 0 24px var(--glow-accent);
-
   --background: var(--bg-base);
   --foreground: var(--fg-primary);
 }
 
 /* ============================================================
-   T7 — CYBERPUNK 2077 (Dark)
-   Void black + neon magenta + electric yellow. Glow intenso.
-   Ispirato a: Cyberpunk 2077 UI, Blade Runner aesthetic.
+   T7 — CYBERPUNK
    ============================================================ */
+[data-theme="cyberpunk"],
 [data-theme="cyberpunk-dark"] {
   --bg-base:     #05030A;
   --bg-surface:  #0A0615;
   --bg-elevated: #100A20;
   --bg-input:    #040208;
   --bg-sidebar:  #05030A;
-
   --border-subtle:  rgba(240,50,230,0.08);
   --border-default: rgba(240,50,230,0.16);
   --border-strong:  rgba(240,50,230,0.32);
-
-  --fg-primary: #F5F0FF;
-  --fg-muted:   #A880E8;
-  --fg-subtle:  #4A2D7A;
-
+  --fg-primary: #FFFFFF;
+  --fg-muted:   #94A3B8;
+  --fg-subtle:  #64748B;
+  --sidebar-border: rgba(255,255,255,0.08);
+  --sidebar-active-border: rgba(240,50,230,0.6);
   --accent:       #F032E6;
   --accent-hover: #D920CE;
   --accent-dim:   rgba(240,50,230,0.13);
   --accent-on:    #0A001A;
-
   --income:      #E6FF00;
-  --income-dim:  rgba(230,255,0,0.09);
   --expense:     #FF0057;
-  --expense-dim: rgba(255,0,87,0.09);
-  --warning:     #FFB700;
-  --warning-dim: rgba(255,183,0,0.09);
-  --info:        #00F5FF;
-  --info-dim:    rgba(0,245,255,0.09);
-
-  --glow-accent:  rgba(240,50,230,0.32);
-  --glow-expense: rgba(255,0,87,0.22);
-
-  --shadow-sm:   0 1px 2px rgba(0,0,0,0.90);
-  --shadow-md:   0 8px 24px -4px rgba(5,0,15,0.92);
-  --shadow-lg:   0 20px 60px -8px rgba(5,0,15,0.96);
-  --shadow-glow: 0 0 52px var(--glow-accent);
-
   --background: var(--bg-base);
   --foreground: var(--fg-primary);
 }
 
-/* ── CYBERPUNK (Light) — Neon su bianco tech ── */
 [data-theme="cyberpunk-light"] {
   --bg-base:     #FAF5FF;
   --bg-surface:  #FEFCFF;
   --bg-elevated: #F0E8FF;
   --bg-input:    #F5F0FF;
   --bg-sidebar:  #160030;
-
   --border-subtle:  rgba(160,0,180,0.07);
   --border-default: rgba(160,0,180,0.14);
   --border-strong:  rgba(160,0,180,0.28);
-
   --fg-primary: #0F001A;
   --fg-muted:   #5E1A7A;
   --fg-subtle:  #AA80CC;
-
+  --sidebar-border: rgba(0,0,0,0.08);
+  --sidebar-active-border: rgba(160,0,180,0.3);
   --accent:       #A000B4;
   --accent-hover: #860098;
   --accent-dim:   rgba(160,0,180,0.09);
   --accent-on:    #FFFFFF;
-
   --income:      #5A7A00;
-  --income-dim:  rgba(90,122,0,0.08);
   --expense:     #AA0038;
-  --expense-dim: rgba(170,0,56,0.08);
-  --warning:     #8A5A00;
-  --warning-dim: rgba(138,90,0,0.08);
-  --info:        #007A8A;
-  --info-dim:    rgba(0,122,138,0.08);
-
-  --glow-accent:  rgba(160,0,180,0.14);
-  --glow-expense: rgba(170,0,56,0.10);
-
-  --shadow-sm:   0 1px 3px rgba(15,0,30,0.07);
-  --shadow-md:   0 4px 16px rgba(15,0,30,0.10);
-  --shadow-lg:   0 16px 40px rgba(15,0,30,0.13);
-  --shadow-glow: 0 0 28px var(--glow-accent);
-
   --background: var(--bg-base);
   --foreground: var(--fg-primary);
 }
 
 /* ============================================================
-   T8 — CLOUD DANCER PRO (Light — Pantone 2026)
-   Bianco latteo caldo. Il più pulito. Mercury / Brex energy.
-   Ispirato a: Apple Card, Mercury Bank, Vercel dashboard.
+   T8 — CLOUD DANCER (Pantone 2026)
    ============================================================ */
+[data-theme="cloud"],
 [data-theme="cloud-light"] {
   --bg-base:     #F8F6F3;
   --bg-surface:  #FDFCFA;
   --bg-elevated: #EDEAE6;
   --bg-input:    #F3F1EE;
   --bg-sidebar:  #1C2233;
-
   --border-subtle:  rgba(0,0,0,0.05);
   --border-default: rgba(0,0,0,0.09);
   --border-strong:  rgba(0,0,0,0.17);
-
   --fg-primary: #0F1420;
   --fg-muted:   #616A7A;
   --fg-subtle:  #9EA8B8;
-
+  --sidebar-border: rgba(0,0,0,0.08);
+  --sidebar-active-border: rgba(29,78,216,0.3);
   --accent:       #1D4ED8;
   --accent-hover: #1840C0;
   --accent-dim:   rgba(29,78,216,0.09);
   --accent-on:    #FFFFFF;
-
   --income:      #0A6640;
-  --income-dim:  rgba(10,102,64,0.08);
   --expense:     #C41A1A;
-  --expense-dim: rgba(196,26,26,0.08);
-  --warning:     #B45008;
-  --warning-dim: rgba(180,80,8,0.08);
-  --info:        #1D4ED8;
-  --info-dim:    rgba(29,78,216,0.08);
-
-  --glow-accent:  rgba(29,78,216,0.12);
-  --glow-expense: rgba(196,26,26,0.10);
-
-  --shadow-sm:   0 1px 3px rgba(0,0,0,0.06);
-  --shadow-md:   0 4px 16px rgba(0,0,0,0.08);
-  --shadow-lg:   0 16px 40px rgba(0,0,0,0.11);
-  --shadow-glow: 0 0 20px var(--glow-accent);
-
   --background: var(--bg-base);
   --foreground: var(--fg-primary);
 }
 
-/* ── CLOUD DANCER PRO (Dark) — Slate dark elegante ── */
 [data-theme="cloud-dark"] {
   --bg-base:     #0E1118;
   --bg-surface:  #161D27;
   --bg-elevated: #1D2636;
   --bg-input:    #0A0E15;
   --bg-sidebar:  #0E1118;
-
   --border-subtle:  rgba(255,255,255,0.05);
   --border-default: rgba(255,255,255,0.09);
   --border-strong:  rgba(255,255,255,0.17);
-
-  --fg-primary: #E8EEF6;
-  --fg-muted:   #8898B0;
-  --fg-subtle:  #3E4E62;
-
+  --fg-primary: #FFFFFF;
+  --fg-muted:   #94A3B8;
+  --fg-subtle:  #64748B;
+  --sidebar-border: rgba(255,255,255,0.08);
+  --sidebar-active-border: rgba(76,142,247,0.5);
   --accent:       #4C8EF7;
   --accent-hover: #3B7AE0;
   --accent-dim:   rgba(76,142,247,0.11);
   --accent-on:    #FFFFFF;
-
   --income:      #4ADE80;
-  --income-dim:  rgba(74,222,128,0.08);
   --expense:     #F87171;
-  --expense-dim: rgba(248,113,113,0.08);
-  --warning:     #FBBF24;
-  --warning-dim: rgba(251,191,36,0.08);
-  --info:        #60A5FA;
-  --info-dim:    rgba(96,165,250,0.08);
-
-  --glow-accent:  rgba(76,142,247,0.22);
-  --glow-expense: rgba(248,113,113,0.15);
-
-  --shadow-sm:   0 1px 2px rgba(0,0,0,0.65);
-  --shadow-md:   0 8px 24px -4px rgba(0,0,0,0.75);
-  --shadow-lg:   0 20px 60px -8px rgba(0,0,0,0.85);
-  --shadow-glow: 0 0 36px var(--glow-accent);
-
   --background: var(--bg-base);
   --foreground: var(--fg-primary);
 }
 
 /* ============================================================
-   T9 — DEEP OCEAN (Dark)
-   Abisso blu + cyan elettrico. Profondità marina premium.
-   Ispirato a: Figma deep blue, Atlassian ocean, Bloomberg.
+   T9 — DEEP OCEAN
    ============================================================ */
+[data-theme="ocean"],
 [data-theme="ocean-dark"] {
   --bg-base:     #040D1A;
   --bg-surface:  #071428;
   --bg-elevated: #0D1D38;
   --bg-input:    #030A14;
   --bg-sidebar:  #040D1A;
-
   --border-subtle:  rgba(0,188,212,0.07);
   --border-default: rgba(0,188,212,0.13);
   --border-strong:  rgba(0,188,212,0.26);
-
-  --fg-primary: #E0EEF8;
-  --fg-muted:   #6A90B0;
-  --fg-subtle:  #2A4060;
-
+  --fg-primary: #FFFFFF;
+  --fg-muted:   #94A3B8;
+  --fg-subtle:  #64748B;
+  --sidebar-border: rgba(255,255,255,0.08);
+  --sidebar-active-border: rgba(0,188,212,0.5);
   --accent:       #00BCD4;
   --accent-hover: #00A5BB;
   --accent-dim:   rgba(0,188,212,0.12);
   --accent-on:    #001C24;
-
   --income:      #26C6DA;
-  --income-dim:  rgba(38,198,218,0.09);
   --expense:     #EF5350;
-  --expense-dim: rgba(239,83,80,0.09);
-  --warning:     #FFA726;
-  --warning-dim: rgba(255,167,38,0.09);
-  --info:        #29B6F6;
-  --info-dim:    rgba(41,182,246,0.09);
-
-  --glow-accent:  rgba(0,188,212,0.28);
-  --glow-expense: rgba(239,83,80,0.18);
-
-  --shadow-sm:   0 1px 2px rgba(0,5,20,0.85);
-  --shadow-md:   0 8px 24px -4px rgba(0,5,20,0.88);
-  --shadow-lg:   0 20px 60px -8px rgba(0,5,20,0.94);
-  --shadow-glow: 0 0 48px var(--glow-accent);
-
   --background: var(--bg-base);
   --foreground: var(--fg-primary);
 }
 
-/* ── DEEP OCEAN (Light) ── */
 [data-theme="ocean-light"] {
   --bg-base:     #EFF8FC;
   --bg-surface:  #FAFEFF;
   --bg-elevated: #E0F0F8;
   --bg-input:    #E8F5FA;
   --bg-sidebar:  #042038;
-
   --border-subtle:  rgba(0,120,140,0.07);
   --border-default: rgba(0,120,140,0.13);
   --border-strong:  rgba(0,120,140,0.26);
-
-  --fg-primary: #041828;
-  --fg-muted:   #205870;
-  --fg-subtle:  #6090AC;
-
+  --fg-primary: #0F172A;
+  --fg-muted:   #475569;
+  --fg-subtle:  #94A3B8;
+  --sidebar-border: rgba(0,0,0,0.08);
+  --sidebar-active-border: rgba(0,136,164,0.3);
   --accent:       #0088A4;
   --accent-hover: #00728C;
   --accent-dim:   rgba(0,136,164,0.09);
   --accent-on:    #FFFFFF;
-
   --income:      #00737A;
-  --income-dim:  rgba(0,115,122,0.08);
   --expense:     #C0241A;
-  --expense-dim: rgba(192,36,26,0.08);
-  --warning:     #A06000;
-  --warning-dim: rgba(160,96,0,0.08);
-  --info:        #005E90;
-  --info-dim:    rgba(0,94,144,0.08);
-
-  --glow-accent:  rgba(0,136,164,0.14);
-  --glow-expense: rgba(192,36,26,0.10);
-
-  --shadow-sm:   0 1px 3px rgba(0,0,0,0.06);
-  --shadow-md:   0 4px 16px rgba(0,15,30,0.09);
-  --shadow-lg:   0 16px 40px rgba(0,15,30,0.12);
-  --shadow-glow: 0 0 24px var(--glow-accent);
-
   --background: var(--bg-base);
   --foreground: var(--fg-primary);
 }
 
 /* ============================================================
-   T10 — MONOCHROME PRO (Dark)
-   Grigio platino. Zero colore. Sofisticato, editoriale.
-   Ispirato a: Apple gray, Notion dark, Linear neutral.
+   T10 — MONOCHROME PRO
    ============================================================ */
+[data-theme="mono"],
 [data-theme="mono-dark"] {
   --bg-base:     #0A0A0A;
   --bg-surface:  #141414;
   --bg-elevated: #1E1E1E;
   --bg-input:    #080808;
   --bg-sidebar:  #0A0A0A;
-
   --border-subtle:  rgba(255,255,255,0.05);
   --border-default: rgba(255,255,255,0.10);
   --border-strong:  rgba(255,255,255,0.20);
-
-  --fg-primary: #F0F0F0;
-  --fg-muted:   #888888;
-  --fg-subtle:  #3E3E3E;
-
+  --fg-primary: #FFFFFF;
+  --fg-muted:   #94A3B8;
+  --fg-subtle:  #64748B;
+  --sidebar-border: rgba(255,255,255,0.08);
+  --sidebar-active-border: rgba(255,255,255,0.3);
   --accent:       #ADADAD;
   --accent-hover: #C8C8C8;
   --accent-dim:   rgba(180,180,180,0.10);
   --accent-on:    #0A0A0A;
-
   --income:      #A8D8A8;
-  --income-dim:  rgba(168,216,168,0.09);
   --expense:     #E08080;
-  --expense-dim: rgba(224,128,128,0.09);
-  --warning:     #D4B870;
-  --warning-dim: rgba(212,184,112,0.09);
-  --info:        #A0B8D4;
-  --info-dim:    rgba(160,184,212,0.09);
-
-  --glow-accent:  rgba(180,180,180,0.14);
-  --glow-expense: rgba(224,128,128,0.14);
-
-  --shadow-sm:   0 1px 2px rgba(0,0,0,0.80);
-  --shadow-md:   0 8px 24px -4px rgba(0,0,0,0.85);
-  --shadow-lg:   0 20px 60px -8px rgba(0,0,0,0.90);
-  --shadow-glow: 0 0 32px var(--glow-accent);
-
   --background: var(--bg-base);
   --foreground: var(--fg-primary);
 }
 
-/* ── MONOCHROME PRO (Light) — Carta premium ── */
 [data-theme="mono-light"] {
   --bg-base:     #F8F8F8;
   --bg-surface:  #FDFDFD;
   --bg-elevated: #EEEEEE;
   --bg-input:    #F3F3F3;
   --bg-sidebar:  #1A1A1A;
-
   --border-subtle:  rgba(0,0,0,0.05);
   --border-default: rgba(0,0,0,0.10);
   --border-strong:  rgba(0,0,0,0.20);
-
-  --fg-primary: #111111;
-  --fg-muted:   #555555;
-  --fg-subtle:  #AAAAAA;
-
+  --fg-primary: #0F172A;
+  --fg-muted:   #475569;
+  --fg-subtle:  #94A3B8;
+  --sidebar-border: rgba(0,0,0,0.08);
+  --sidebar-active-border: rgba(0,0,0,0.3);
   --accent:       #333333;
   --accent-hover: #111111;
   --accent-dim:   rgba(50,50,50,0.08);
   --accent-on:    #FFFFFF;
-
   --income:      #2D7A2D;
-  --income-dim:  rgba(45,122,45,0.08);
   --expense:     #AA2222;
-  --expense-dim: rgba(170,34,34,0.08);
-  --warning:     #7A5500;
-  --warning-dim: rgba(122,85,0,0.08);
-  --info:        #224488;
-  --info-dim:    rgba(34,68,136,0.08);
-
-  --glow-accent:  rgba(50,50,50,0.10);
-  --glow-expense: rgba(170,34,34,0.09);
-
-  --shadow-sm:   0 1px 3px rgba(0,0,0,0.07);
-  --shadow-md:   0 4px 16px rgba(0,0,0,0.09);
-  --shadow-lg:   0 16px 40px rgba(0,0,0,0.12);
-  --shadow-glow: 0 0 16px var(--glow-accent);
-
   --background: var(--bg-base);
   --foreground: var(--fg-primary);
 }
 
 /* ============================================================
-   BODY GRADIENTS — TEMI PREMIUM v2.0
-   Radial-gradient agli angoli, opacità 3–8% (15% Aurora).
-   background-attachment: fixed mantiene il gradiente statico
-   durante lo scroll per un effetto profondità premium.
+   T3 — AUTO (Segue sistema operativo)
    ============================================================ */
-
-/* T1 — OBSIDIAN DARK: teal angolo top-left + info bottom-right */
-[data-theme="obsidian-dark"] body {
-  background-image:
-    radial-gradient(ellipse at 0% 0%,   rgba(29,185,166,0.07) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 100%, rgba(96,165,250,0.05) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 0%,  rgba(29,185,166,0.03) 0%, transparent 38%);
-  background-attachment: fixed;
+[data-theme="auto"] {
+  --bg-base:    #F7F5F2;
+  --bg-surface: #FDFCFB;
+  --bg-elevated:#EDEAE6;
+  --bg-input:   #F2F0ED;
+  --bg-sidebar: #1C2333;
+  --border-subtle:  rgba(0,0,0,0.05);
+  --border-default: rgba(0,0,0,0.09);
+  --border-strong:  rgba(0,0,0,0.18);
+  --fg-primary: #0F172A;
+  --fg-muted:   #475569;
+  --fg-subtle:  #94A3B8;
+  --sidebar-border: rgba(0,0,0,0.08);
+  --sidebar-active-border: rgba(37,99,235,0.3);
+  --accent:       #2563EB;
+  --accent-hover: #1D4ED8;
+  --accent-dim:   rgba(37,99,235,0.08);
+  --accent-on:    #FFFFFF;
+  --income:      #059669;
+  --expense:     #DC2626;
+  --background: var(--bg-base);
+  --foreground: var(--fg-primary);
 }
 
-/* T1 — OBSIDIAN LIGHT */
-[data-theme="obsidian-light"] body {
-  background-image:
-    radial-gradient(ellipse at 0% 0%,   rgba(15,160,144,0.05) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 100%, rgba(37,99,235,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 0%,  rgba(15,160,144,0.03) 0%, transparent 38%);
-  background-attachment: fixed;
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] {
+    --bg-base:    #0D1117;
+    --bg-surface: #161B22;
+    --bg-elevated:#1C2333;
+    --bg-input:   #0A0D13;
+    --bg-sidebar: #0D1117;
+    --border-subtle:  rgba(255,255,255,0.05);
+    --border-default: rgba(255,255,255,0.09);
+    --border-strong:  rgba(255,255,255,0.18);
+    --fg-primary: #FFFFFF;
+    --fg-muted:   #94A3B8;
+    --fg-subtle:  #64748B;
+    --sidebar-border: rgba(255,255,255,0.08);
+    --sidebar-active-border: rgba(29,185,166,0.4);
+    --accent:       #1DB9A6;
+    --accent-hover: #18A897;
+    --accent-dim:   rgba(29,185,166,0.10);
+    --accent-on:    #021A16;
+    --income:      #4ADE80;
+    --expense:     #F87171;
+    --background: var(--bg-base);
+    --foreground: var(--fg-primary);
+  }
 }
 
-/* T2 — MIDNIGHT SAPPHIRE DARK: blue + cyan */
-[data-theme="sapphire-dark"] body {
+/* ============================================================
+   BODY GRADIENTS — TEMI PREMIUM v2.0
+   ============================================================ */
+body {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  background-color: var(--bg-base);
+  color: var(--fg-primary);
+  background-image:
+    radial-gradient(ellipse at 15% 10%, rgba(29,185,166,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 90%, rgba(96,165,250,0.03) 0%, transparent 50%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+
+[data-theme="sapphire-dark"] body, [data-theme="sapphire"] body {
   background-image:
     radial-gradient(ellipse at 0% 0%,   rgba(59,139,245,0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 100%, rgba(56,189,248,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 100%, rgba(59,139,245,0.04) 0%, transparent 40%);
-  background-attachment: fixed;
+    radial-gradient(ellipse at 100% 100%, rgba(56,189,248,0.06) 0%, transparent 50%);
 }
 
-/* T2 — MIDNIGHT SAPPHIRE LIGHT */
-[data-theme="sapphire-light"] body {
-  background-image:
-    radial-gradient(ellipse at 0% 0%,   rgba(29,91,204,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 100%, rgba(56,189,248,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 0%,  rgba(29,91,204,0.03) 0%, transparent 38%);
-  background-attachment: fixed;
-}
-
-/* T3 — AURORA BOREALIS DARK: teal top-left + violet bottom-right + green center-top */
-/* Opacità più alta (0.12–0.15) per simulare aurora vera */
-[data-theme="aurora-dark"] body {
+[data-theme="aurora-dark"] body, [data-theme="aurora"] body {
   background-image:
     radial-gradient(ellipse at 5% 15%,  rgba(45,212,191,0.14) 0%, transparent 48%),
-    radial-gradient(ellipse at 90% 85%, rgba(167,139,250,0.12) 0%, transparent 48%),
-    radial-gradient(ellipse at 55% 5%,  rgba(52,211,153,0.10) 0%, transparent 42%),
-    radial-gradient(ellipse at 100% 40%, rgba(45,212,191,0.06) 0%, transparent 35%);
-  background-attachment: fixed;
-}
-
-/* T3 — AURORA BOREALIS LIGHT */
-[data-theme="aurora-light"] body {
-  background-image:
-    radial-gradient(ellipse at 0% 0%,   rgba(13,148,136,0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 100%, rgba(124,58,237,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 60% 0%,  rgba(5,150,105,0.05) 0%, transparent 40%);
-  background-attachment: fixed;
-}
-
-/* T4 — SUNSET DUSK DARK: orange + violet + rose */
-[data-theme="sunset-dark"] body {
-  background-image:
-    radial-gradient(ellipse at 0% 100%,  rgba(249,115,22,0.09) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 0%,  rgba(251,113,133,0.07) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 100%, rgba(139,92,246,0.06) 0%, transparent 42%);
-  background-attachment: fixed;
-}
-
-/* T4 — SUNSET DUSK LIGHT */
-[data-theme="sunset-light"] body {
-  background-image:
-    radial-gradient(ellipse at 0% 100%,  rgba(234,88,12,0.07) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 0%,  rgba(251,113,133,0.05) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 0%,   rgba(217,70,239,0.03) 0%, transparent 38%);
-  background-attachment: fixed;
-}
-
-/* T5 — EMERALD FOREST DARK: green + cadet-blue */
-[data-theme="forest-dark"] body {
-  background-image:
-    radial-gradient(ellipse at 0% 0%,   rgba(123,160,91,0.07) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 100%, rgba(95,158,160,0.05) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 0%,  rgba(93,191,78,0.04) 0%, transparent 38%);
-  background-attachment: fixed;
-}
-
-/* T5 — EMERALD FOREST LIGHT */
-[data-theme="forest-light"] body {
-  background-image:
-    radial-gradient(ellipse at 0% 0%,   rgba(74,122,40,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 100%, rgba(30,107,114,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 0%,  rgba(74,122,40,0.03) 0%, transparent 38%);
-  background-attachment: fixed;
-}
-
-/* T6 — ROSE GOLD DARK: pink + gold */
-[data-theme="rosegold-dark"] body {
-  background-image:
-    radial-gradient(ellipse at 0% 0%,   rgba(232,121,160,0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 100%, rgba(212,168,83,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 0%,  rgba(192,132,252,0.04) 0%, transparent 38%);
-  background-attachment: fixed;
-}
-
-/* T6 — ROSE GOLD LIGHT */
-[data-theme="rosegold-light"] body {
-  background-image:
-    radial-gradient(ellipse at 0% 0%,   rgba(190,30,90,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 100%, rgba(139,105,20,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 0%,  rgba(190,30,90,0.03) 0%, transparent 38%);
-  background-attachment: fixed;
-}
-
-/* T7 — CYBERPUNK DARK: magenta + yellow-neon + cyan */
-[data-theme="cyberpunk-dark"] body {
-  background-image:
-    radial-gradient(ellipse at 0% 0%,   rgba(240,50,230,0.09) 0%, transparent 48%),
-    radial-gradient(ellipse at 100% 100%, rgba(230,255,0,0.06) 0%, transparent 48%),
-    radial-gradient(ellipse at 100% 0%,  rgba(0,245,255,0.05) 0%, transparent 38%),
-    radial-gradient(ellipse at 0% 100%,  rgba(240,50,230,0.05) 0%, transparent 35%);
-  background-attachment: fixed;
-}
-
-/* T7 — CYBERPUNK LIGHT */
-[data-theme="cyberpunk-light"] body {
-  background-image:
-    radial-gradient(ellipse at 0% 0%,   rgba(160,0,180,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 100%, rgba(90,122,0,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 0%,  rgba(0,122,138,0.04) 0%, transparent 38%);
-  background-attachment: fixed;
-}
-
-/* T8 — CLOUD DANCER LIGHT: blue subtle */
-[data-theme="cloud-light"] body {
-  background-image:
-    radial-gradient(ellipse at 0% 0%,   rgba(29,78,216,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 100%, rgba(10,102,64,0.03) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 0%,  rgba(29,78,216,0.02) 0%, transparent 38%);
-  background-attachment: fixed;
-}
-
-/* T8 — CLOUD DANCER DARK */
-[data-theme="cloud-dark"] body {
-  background-image:
-    radial-gradient(ellipse at 0% 0%,   rgba(76,142,247,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 100%, rgba(74,222,128,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 0%,  rgba(76,142,247,0.03) 0%, transparent 38%);
-  background-attachment: fixed;
-}
-
-/* T9 — DEEP OCEAN DARK: cyan + blue abissale */
-[data-theme="ocean-dark"] body {
-  background-image:
-    radial-gradient(ellipse at 0% 0%,   rgba(0,188,212,0.09) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 100%, rgba(41,182,246,0.07) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 100%, rgba(0,188,212,0.05) 0%, transparent 40%);
-  background-attachment: fixed;
-}
-
-/* T9 — DEEP OCEAN LIGHT */
-[data-theme="ocean-light"] body {
-  background-image:
-    radial-gradient(ellipse at 0% 0%,   rgba(0,136,164,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 100%, rgba(0,94,144,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 0%,  rgba(0,136,164,0.03) 0%, transparent 38%);
-  background-attachment: fixed;
-}
-
-/* T10 — MONOCHROME PRO DARK: grigio sottilissimo */
-[data-theme="mono-dark"] body {
-  background-image:
-    radial-gradient(ellipse at 0% 0%,   rgba(180,180,180,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 100%, rgba(160,184,212,0.03) 0%, transparent 50%);
-  background-attachment: fixed;
-}
-
-/* T10 — MONOCHROME PRO LIGHT: neutro assoluto, quasi niente */
-[data-theme="mono-light"] body {
-  background-image:
-    radial-gradient(ellipse at 0% 0%,   rgba(50,50,50,0.03) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 100%, rgba(50,50,50,0.02) 0%, transparent 50%);
-  background-attachment: fixed;
+    radial-gradient(ellipse at 90% 85%, rgba(167,139,250,0.12) 0%, transparent 48%);
 }
 
 /* ============================================================
@@ -1523,10 +681,6 @@ body {
   from { opacity: 0; transform: scale(0.97); }
   to   { opacity: 1; transform: scale(1); }
 }
-@keyframes auroraShift {
-  0%,100% { opacity: 1; }
-  50%      { opacity: 0.7; }
-}
 
 .stagger-item { animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) both; }
 .stagger-item:nth-child(1) { animation-delay: 0.05s; }
@@ -1534,17 +688,6 @@ body {
 .stagger-item:nth-child(3) { animation-delay: 0.15s; }
 .stagger-item:nth-child(4) { animation-delay: 0.20s; }
 .stagger-item:nth-child(5) { animation-delay: 0.25s; }
-
-.stagger-container > * {
-  opacity: 0;
-  transform: translateY(10px);
-  animation: fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) forwards;
-}
-.stagger-container > *:nth-child(1) { animation-delay: 0.05s; }
-.stagger-container > *:nth-child(2) { animation-delay: 0.10s; }
-.stagger-container > *:nth-child(3) { animation-delay: 0.15s; }
-.stagger-container > *:nth-child(4) { animation-delay: 0.20s; }
-.stagger-container > *:nth-child(5) { animation-delay: 0.25s; }
 
 .btn-squishy {
   transition: transform 0.18s cubic-bezier(0.175,0.885,0.32,1.275);

@@ -160,17 +160,39 @@ export function DashboardHeader({
 
       {/* Prominent KPI "Disponibile Ora" */}
       <div className="flex justify-center md:justify-start">
-        <div className="glass w-full md:w-auto px-5 sm:px-8 lg:px-10 py-4 sm:py-5 lg:py-6 rounded-[2rem] md:rounded-[2.5rem] border border-[var(--accent)]/30 bg-[var(--accent-dim)]/5 flex items-center gap-4 md:gap-6 shadow-xl animate-in zoom-in-95 duration-700">
-          <div className="p-3 md:p-4 bg-[var(--accent)] rounded-[1.5rem] md:rounded-[2rem] text-[var(--accent-on)] shadow-[0_0_20px_var(--glow-accent)] shrink-0">
+        <div className={cn(
+          "glass w-full md:w-auto px-5 sm:px-8 lg:px-10 py-4 sm:py-5 lg:py-6 rounded-[2rem] md:rounded-[2.5rem] flex items-center gap-4 md:gap-6 shadow-xl animate-in zoom-in-95 duration-700",
+          available < 0
+            ? "border border-[var(--expense)]/40 bg-[var(--expense-dim)]/10"
+            : "border border-[var(--accent)]/30 bg-[var(--accent-dim)]/5"
+        )}>
+          <div className={cn(
+            "p-3 md:p-4 rounded-[1.5rem] md:rounded-[2rem] shrink-0",
+            available < 0
+              ? "bg-[var(--expense)] text-white shadow-[0_0_20px_var(--expense)]"
+              : "bg-[var(--accent)] text-[var(--accent-on)] shadow-[0_0_20px_var(--glow-accent)]"
+          )}>
             <Droplets size={22} className="md:hidden" />
             <Droplets size={28} className="hidden md:block" />
           </div>
           <div>
-            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-[var(--accent)] mb-1">Liquidità Disponibile Ora</p>
-            <p className="text-2xl sm:text-3xl lg:text-4xl font-mono font-black text-[var(--fg-primary)] tracking-tighter">
+            <p className={cn(
+              "text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] mb-1",
+              available < 0 ? "text-[var(--expense)]" : "text-[var(--accent)]"
+            )}>
+              {available < 0 ? "⚠ Liquidità Insufficiente" : "Liquidità Disponibile Ora"}
+            </p>
+            <p className={cn(
+              "text-2xl sm:text-3xl lg:text-4xl font-mono font-black tracking-tighter",
+              available < 0 ? "text-[var(--expense)]" : "text-[var(--fg-primary)]"
+            )}>
               {formatCurrency(available)}
             </p>
-            <p className="text-[9px] text-[var(--fg-muted)] font-medium mt-1 italic">Sottratti {formatCurrency(Math.abs(earmarked))} già destinati agli obiettivi</p>
+            <p className="text-[9px] text-[var(--fg-muted)] font-medium mt-1 italic">
+              {available < 0
+                ? `Gli obiettivi (${formatCurrency(earmarked)}) superano la liquidità disponibile`
+                : `Sottratti ${formatCurrency(Math.abs(earmarked))} già destinati agli obiettivi`}
+            </p>
           </div>
         </div>
       </div>

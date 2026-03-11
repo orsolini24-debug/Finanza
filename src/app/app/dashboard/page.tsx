@@ -175,7 +175,7 @@ export default async function Dashboard({
       />
 
       {/* KPI Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         <StatCard label="Saldo Periodo" tooltip="Differenza netta tra entrate e uscite nel periodo selezionato. Positivo = risparmiato, negativo = speso di più." value={formatCurrency(totalIncome + totalExpenses)} icon={<Wallet className="text-blue-400" />} color="blue" />
         <StatCard label="Entrate" tooltip="Somma di tutti i movimenti in entrata (positivi) del periodo. Stipendi, rimborsi, incassi." value={formatCurrency(totalIncome)} icon={<TrendingUp className="text-[var(--income)]" />} color="green" />
         <StatCard label="Uscite" tooltip="Somma di tutti i movimenti in uscita (negativi) del periodo. Spese, bollette, abbonamenti." value={formatCurrency(Math.abs(totalExpenses))} icon={<TrendingDown className="text-[var(--expense)]" />} color="red" />
@@ -206,11 +206,14 @@ export default async function Dashboard({
             {topBudgets.map((b) => (
               <div key={b.id}>
                 <div className="flex justify-between items-end text-sm mb-2">
-                  <span className="font-bold text-[var(--fg-primary)]">{b.category.name}</span>
-                  <span className="text-[10px] font-black uppercase text-[var(--fg-subtle)]">{Math.round(b.percentage)}%</span>
+                  <span className="font-bold text-[var(--fg-primary)] truncate mr-2">{b.category.name}</span>
+                  <span className={cn(
+                    "text-[11px] font-black shrink-0",
+                    b.percentage < 75 ? "text-[var(--income)]" : b.percentage < 100 ? "text-[var(--warning)]" : "text-[var(--expense)]"
+                  )}>{Math.round(b.percentage)}%</span>
                 </div>
                 <div className="w-full bg-[var(--bg-input)] rounded-full h-1.5 overflow-hidden border border-[var(--border-subtle)]">
-                  <div className={cn("h-full rounded-full transition-all duration-1000", b.percentage < 75 ? "bg-[var(--income)]" : b.percentage < 100 ? "bg-[var(--warning)]" : "bg-[var(--expense)]")} style={{ width: `${Math.min(100, b.percentage)}%` }} />
+                  <div className={cn("h-full rounded-full transition-all duration-300", b.percentage < 75 ? "bg-[var(--income)]" : b.percentage < 100 ? "bg-[var(--warning)]" : "bg-[var(--expense)]")} style={{ width: `${Math.min(100, b.percentage)}%` }} />
                 </div>
               </div>
             ))}
@@ -251,7 +254,9 @@ export default async function Dashboard({
             {confirmedInPeriod.slice(0, 5).map(tx => (
               <div key={tx.id} className="flex items-center justify-between group p-3 hover:bg-[var(--bg-elevated)]/50 rounded-2xl transition-all">
                 <div className="flex items-center gap-3">
-                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shadow-sm", Number(tx.amount) < 0 ? "bg-[var(--expense-dim)] text-[var(--expense)]" : "bg-[var(--income-dim)] text-[var(--income)]")}>{tx.category?.name?.[0] || '?'}</div>
+                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shadow-sm shrink-0", Number(tx.amount) < 0 ? "bg-[var(--expense-dim)] text-[var(--expense)]" : "bg-[var(--income-dim)] text-[var(--income)]")}>
+                    {tx.category?.name ? tx.category.name.slice(0, 2).toUpperCase() : (Number(tx.amount) < 0 ? '−' : '+')}
+                  </div>
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-[var(--fg-primary)] truncate">{tx.description}</p>
                     <p className="text-[10px] text-[var(--fg-muted)] font-medium uppercase">{new Date(tx.date).toLocaleDateString('it-IT')}</p>

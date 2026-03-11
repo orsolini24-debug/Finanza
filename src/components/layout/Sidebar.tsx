@@ -85,8 +85,8 @@ export default function Sidebar() {
                 className={cn(
                   "flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group w-full outline-none border",
                   isActive
-                    ? "bg-[var(--accent-dim)] text-[var(--accent)] border-[var(--sidebar-active-border)] shadow-sm"
-                    : "text-[var(--fg-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--fg-primary)] border-transparent hover:border-[var(--sidebar-border)]"
+                    ? "bg-[var(--accent-dim)] border-[var(--sidebar-active-border)] shadow-sm"
+                    : "hover:bg-[var(--bg-elevated)] border-transparent hover:border-[var(--sidebar-border)]"
                 )}
               >
                 <div className={cn(
@@ -95,7 +95,7 @@ export default function Sidebar() {
                     ? "bg-[var(--accent)] text-[var(--accent-on)] border-[var(--accent)] shadow-lg" 
                     : "bg-transparent group-hover:bg-[var(--bg-surface)] border-transparent group-hover:border-[var(--sidebar-border)] group-hover:shadow-sm"
                 )}>
-                  <Icon size={18} strokeWidth={isActive ? 2.5 : 2} className={cn("transition-transform", isActive ? "scale-100" : "group-hover:scale-110")} />
+                  <Icon size={18} strokeWidth={isActive ? 2.5 : 2} className={cn("transition-transform", isActive ? "scale-100" : "text-[var(--fg-muted)] group-hover:text-[var(--fg-primary)] group-hover:scale-110")} />
                 </div>
                 <span className={cn("text-[14px] font-black tracking-tight transition-colors", isActive ? "text-[var(--fg-primary)]" : "text-[var(--fg-muted)] group-hover:text-[var(--fg-primary)]")}>
                   {item.name}

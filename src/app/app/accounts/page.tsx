@@ -19,7 +19,7 @@ export default async function AccountsPage() {
     }
   });
 
-  if (!workspace) return <div className="p-8">Workspace non trovato.</div>;
+  if (!workspace) return <div className="p-8">Nessun workspace trovato. Contatta l'assistenza.</div>;
 
   // Calcolo dei saldi per ogni account
   const accountsWithBalances = await Promise.all(workspace.accounts.map(async (acc) => {
@@ -66,6 +66,17 @@ export default async function AccountsPage() {
             {formatCurrency(totalNetWorth)}
           </p>
         </div>
+      </div>
+
+      <div className="flex items-start gap-3 p-4 bg-[var(--bg-elevated)]/50 border border-[var(--border-subtle)] rounded-2xl text-[11px] text-[var(--fg-muted)] leading-relaxed">
+        <span className="shrink-0 mt-0.5">💡</span>
+        <span>
+          Il <span className="font-bold text-[var(--fg-primary)]">tipo di conto</span> determina dove appare nel patrimonio:
+          <span className="text-blue-400 font-bold"> Corrente/Contanti</span> → Liquidità ·
+          <span className="text-[var(--income)] font-bold"> Deposito</span> → Risparmi ·
+          <span className="text-purple-400 font-bold"> Investimento</span> → Investimenti ·
+          <span className="text-[var(--expense)] font-bold"> Prestito/Mutuo</span> → Debiti
+        </span>
       </div>
 
       {accountsWithBalances.length === 0 ? (

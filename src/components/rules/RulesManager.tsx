@@ -143,7 +143,7 @@ export default function RulesManager({ rules, categories }: RulesManagerProps) {
 
             <div className="flex items-center gap-4 shrink-0">
               <div className="px-3 py-1.5 bg-[var(--bg-elevated)] rounded-xl border border-[var(--border-subtle)] text-center min-w-[60px]">
-                <span className="block text-[8px] text-[var(--fg-subtle)] uppercase font-extrabold tracking-[0.2em] mb-0.5">Priorità</span>
+                <span className="block text-[8px] text-[var(--fg-subtle)] uppercase font-extrabold tracking-[0.2em] mb-0.5">Ordine</span>
                 <span className="font-mono font-bold text-sm text-[var(--fg-primary)] tracking-tighter">{rule.priority}</span>
               </div>
               
@@ -250,7 +250,7 @@ export default function RulesManager({ rules, categories }: RulesManagerProps) {
               </div>
               <div className="flex items-end gap-6">
                 <div className="flex-1 space-y-2">
-                  <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest ml-1">Priorità (bassa = prima)</label>
+                  <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest ml-1">Ordine di applicazione (1 = prima)</label>
                   <input
                     name="priority"
                     type="number"

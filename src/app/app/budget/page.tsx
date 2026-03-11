@@ -24,7 +24,7 @@ export default async function BudgetPage({
     include: { categories: { orderBy: { name: 'asc' } } }
   });
 
-  if (!workspace) return <div className="p-8">Workspace non trovato.</div>;
+  if (!workspace) return <div className="p-8">Nessun workspace trovato. Contatta l'assistenza.</div>;
 
   const budgetData = await getBudgetsWithSpending(workspace.id, month);
 
@@ -42,6 +42,14 @@ export default async function BudgetPage({
             </p>
           </div>
         </div>
+      </div>
+
+      <div className="flex items-start gap-3 p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl text-[11px] text-[var(--fg-muted)] leading-relaxed">
+        <span className="text-blue-400 shrink-0 mt-0.5">ℹ</span>
+        <span>
+          <span className="font-bold text-[var(--fg-primary)]">I budget sono limiti di monitoraggio</span>, non bloccano i fondi.
+          Imposta un limite mensile per categoria e l&apos;app ti avvisa quando ti avvicini alla soglia.
+        </span>
       </div>
 
       <BudgetManager 

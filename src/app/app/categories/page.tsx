@@ -13,7 +13,7 @@ export default async function CategoriesPage() {
     include: { categories: { include: { parent: true } } },
   });
 
-  if (!workspace) return <div className="p-8">Workspace non trovato.</div>;
+  if (!workspace) return <div className="p-8">Nessun workspace trovato. Contatta l'assistenza.</div>;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">

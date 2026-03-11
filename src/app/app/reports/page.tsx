@@ -21,7 +21,7 @@ export default async function ReportsPage() {
     }
   });
 
-  if (!workspace) return <div className="p-8">Workspace non trovato.</div>;
+  if (!workspace) return <div className="p-8">Nessun workspace trovato. Contatta l'assistenza.</div>;
 
   // Saldo attuale totale per la proiezione
   const accountsWithBalances = await Promise.all(workspace.accounts.map(async (acc) => {

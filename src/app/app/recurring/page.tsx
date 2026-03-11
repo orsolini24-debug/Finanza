@@ -22,7 +22,7 @@ export default async function RecurringPage() {
     },
   });
 
-  if (!workspace) return <div className="p-8">Workspace non trovato.</div>;
+  if (!workspace) return <div className="p-8">Nessun workspace trovato. Contatta l'assistenza.</div>;
 
   // Calcolo flussi mensili
   const monthlyIncomes = workspace.recurring
@@ -52,6 +52,9 @@ export default async function RecurringPage() {
             <p className="text-[9px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest">Flusso Mensile Netto</p>
             <p className="text-xl font-mono font-bold text-[var(--fg-primary)] mt-1">
               {fmt(monthlyIncomes - monthlyExpenses)}
+            </p>
+            <p className="text-[9px] text-[var(--fg-muted)] font-medium mt-1 italic">
+              Basato solo sulle ricorrenze mensili configurate
             </p>
           </div>
         </div>

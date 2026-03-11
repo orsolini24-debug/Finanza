@@ -35,7 +35,7 @@ export default async function TransactionsPage({
     },
   });
 
-  if (!workspace) return <div className="p-8">Workspace non trovato.</div>;
+  if (!workspace) return <div className="p-8">Nessun workspace trovato. Contatta l'assistenza.</div>;
 
   const suggestions = await getSuggestedRules(workspace.id);
 

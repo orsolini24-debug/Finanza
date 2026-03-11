@@ -16,7 +16,7 @@ export default async function GoalsPage() {
     },
   });
 
-  if (!workspace) return <div className="p-8">No workspace found.</div>;
+  if (!workspace) return <div className="p-8">Nessun workspace trovato. Contatta l'assistenza.</div>;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">

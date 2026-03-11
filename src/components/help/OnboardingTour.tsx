@@ -119,7 +119,7 @@ export default function OnboardingTour({ externalOpen, onExternalClose }: Onboar
         animate={{ opacity: 1, x: 0, scale: 1 }}
         exit={{ opacity: 0, x: -direction * 40, scale: 0.97 }}
         transition={{ duration: 0.25, ease: 'easeOut' }}
-        className="glass bg-[var(--bg-surface)] rounded-[2.5rem] shadow-2xl w-full max-w-md border border-[var(--border-default)] overflow-hidden"
+        className="glass bg-[var(--bg-surface)] rounded-[2.5rem] shadow-2xl w-full max-w-md border border-[var(--border-default)] overflow-hidden max-h-[90dvh] flex flex-col"
       >
         {/* Progress bar */}
         <div className="w-full h-1 bg-[var(--bg-input)]">
@@ -130,10 +130,10 @@ export default function OnboardingTour({ externalOpen, onExternalClose }: Onboar
         </div>
 
         {/* Close */}
-        <div className="flex justify-end px-6 pt-4">
+        <div className="flex justify-end px-4 sm:px-6 pt-4">
           <button
             onClick={close}
-            className="p-2 text-[var(--fg-muted)] hover:text-[var(--fg-primary)] hover:bg-[var(--bg-elevated)] rounded-xl transition-colors text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5"
+            className="p-3 min-w-[44px] min-h-[44px] flex items-center justify-center text-[var(--fg-muted)] hover:text-[var(--fg-primary)] hover:bg-[var(--bg-elevated)] rounded-xl transition-colors text-[10px] font-bold uppercase tracking-widest gap-1.5"
           >
             <X size={14} />
             Salta
@@ -141,7 +141,7 @@ export default function OnboardingTour({ externalOpen, onExternalClose }: Onboar
         </div>
 
         {/* Content */}
-        <div className="px-8 pb-6 pt-2 space-y-5">
+        <div className="px-4 sm:px-8 pb-4 sm:pb-6 pt-2 space-y-5 overflow-y-auto custom-scrollbar">
           <div className="flex flex-col items-center text-center space-y-4">
             <div className="text-6xl drop-shadow-md">{current.emoji}</div>
             <h2 className="text-2xl font-display font-black text-[var(--fg-primary)] tracking-tight leading-tight">
@@ -165,7 +165,7 @@ export default function OnboardingTour({ externalOpen, onExternalClose }: Onboar
             <a
               href={current.cta.href}
               onClick={close}
-              className="flex items-center justify-center gap-2 w-full py-3 bg-[var(--bg-elevated)] border border-[var(--border-default)] text-[var(--fg-primary)] rounded-2xl font-bold text-sm hover:border-[var(--accent)] hover:text-[var(--accent)] transition-all"
+              className="flex items-center justify-center gap-2 w-full py-3 bg-[var(--bg-elevated)] border border-[var(--border-default)] text-[var(--fg-primary)] rounded-2xl font-bold text-sm hover:border-[var(--accent)] hover:text-[var(--accent)] transition-all min-h-[44px]"
             >
               {current.cta.label} →
             </a>
@@ -173,11 +173,11 @@ export default function OnboardingTour({ externalOpen, onExternalClose }: Onboar
         </div>
 
         {/* Navigation */}
-        <div className="px-8 pb-8 flex items-center justify-between gap-4">
+        <div className="px-4 sm:px-8 pb-4 sm:pb-8 flex items-center justify-between gap-4 mt-auto border-t border-[var(--border-subtle)] pt-4">
           <button
             onClick={prev}
             disabled={step === 0}
-            className="flex items-center gap-1.5 px-4 py-2.5 text-[var(--fg-muted)] font-bold text-sm rounded-2xl hover:bg-[var(--bg-elevated)] transition-all disabled:opacity-0 disabled:pointer-events-none"
+            className="flex items-center gap-1.5 px-4 py-3 min-h-[44px] text-[var(--fg-muted)] font-bold text-sm rounded-2xl hover:bg-[var(--bg-elevated)] transition-all disabled:opacity-0 disabled:pointer-events-none"
           >
             <ChevronLeft size={16} />
             Indietro
@@ -190,7 +190,7 @@ export default function OnboardingTour({ externalOpen, onExternalClose }: Onboar
                 key={i}
                 onClick={() => { setDirection(i > step ? 1 : -1); setStep(i) }}
                 className={cn(
-                  'rounded-full transition-all duration-300',
+                  'rounded-full transition-all duration-300 p-1',
                   i === step
                     ? 'w-5 h-2 bg-[var(--accent)]'
                     : i < step
@@ -204,7 +204,7 @@ export default function OnboardingTour({ externalOpen, onExternalClose }: Onboar
           <button
             onClick={next}
             className={cn(
-              'flex items-center gap-1.5 px-5 py-2.5 font-bold text-sm rounded-2xl transition-all',
+              'flex items-center gap-1.5 px-5 py-3 min-h-[44px] font-bold text-sm rounded-2xl transition-all',
               isLast
                 ? 'bg-[var(--accent)] text-[var(--accent-on)] hover:shadow-[0_0_20px_var(--glow-accent)]'
                 : 'bg-[var(--bg-elevated)] text-[var(--fg-primary)] hover:bg-[var(--accent)] hover:text-[var(--accent-on)]'

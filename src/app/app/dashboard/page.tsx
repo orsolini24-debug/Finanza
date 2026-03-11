@@ -304,17 +304,17 @@ function StatCard({ label, value, icon, color, isWarning, tooltip }: any) {
     purple: "bg-purple-500/10 text-purple-400 border-purple-500/20",
   }
   return (
-    <div className={cn("glass p-6 rounded-[2rem] border border-[var(--border-subtle)] transition-all duration-500", isWarning && "border-yellow-500/30 bg-yellow-500/5 animate-pulse")}>
-      <div className="flex items-start justify-between mb-4">
-        <div className={cn("p-3 rounded-2xl", colorMap[color])}>{icon}</div>
+    <div className={cn("glass p-3 sm:p-4 md:p-6 rounded-[2rem] border border-[var(--border-subtle)] transition-all duration-500", isWarning && "border-yellow-500/30 bg-yellow-500/5 animate-pulse")}>
+      <div className="flex items-start justify-between mb-3 md:mb-4">
+        <div className={cn("p-2 sm:p-3 rounded-2xl shrink-0", colorMap[color])}>{icon}</div>
       </div>
       <Tooltip content={tooltip} side="bottom">
-        <p className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest mb-1 cursor-help inline-flex items-center gap-1">
+        <p className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest mb-1 cursor-help inline-flex items-center gap-1 leading-tight">
           {label}
           {tooltip && <HelpCircle size={10} className="opacity-50" />}
         </p>
       </Tooltip>
-      <p className="text-xl sm:text-2xl font-mono font-black tracking-tighter text-[var(--fg-primary)]">{value}</p>
+      <p className="text-base sm:text-xl md:text-2xl font-mono font-black tracking-tighter text-[var(--fg-primary)] truncate">{value}</p>
     </div>
   )
 }

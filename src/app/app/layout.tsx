@@ -1,4 +1,5 @@
 import Sidebar from "@/components/layout/Sidebar";
+import BottomNav from "@/components/layout/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import PeriodPicker from "@/components/layout/PeriodPicker";
 import { Suspense } from "react";
@@ -32,6 +33,9 @@ export default async function AppLayout({
           </div>
         </main>
       </div>
+      <Suspense fallback={null}>
+        <BottomNav />
+      </Suspense>
     </div>
   );
 }

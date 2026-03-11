@@ -1,5 +1,20 @@
 import prisma from "@/lib/prisma";
 
+function calcNextDate(currentDate: Date, cadence: string): Date {
+  const next = new Date(currentDate);
+  const day = next.getDate();
+  if (cadence === 'weekly') {
+    next.setDate(next.getDate() + 7);
+  } else if (cadence === 'monthly') {
+    next.setMonth(next.getMonth() + 1);
+    if (next.getDate() !== day) next.setDate(0); // gestione fine mese (es. 31 gen → 28 feb)
+  } else if (cadence === 'yearly') {
+    next.setFullYear(next.getFullYear() + 1);
+    if (next.getDate() !== day) next.setDate(0);
+  }
+  return next;
+}
+
 export async function processOverdueRecurring(workspaceId: string): Promise<number> {
   const today = new Date();
   today.setHours(23, 59, 59, 999);
@@ -16,7 +31,7 @@ export async function processOverdueRecurring(workspaceId: string): Promise<numb
   let processedCount = 0;
 
   for (const item of overdueItems) {
-    // Se la ricorrenza ha una data di fine ed è scaduta, eliminala e salta
+    // Se la ricorrenza ha una data di fine ed è già scaduta, eliminala e salta
     if (item.endDate && item.nextDate > item.endDate) {
       await prisma.recurringItem.delete({ where: { id: item.id } });
       continue;
@@ -24,7 +39,21 @@ export async function processOverdueRecurring(workspaceId: string): Promise<numb
 
     if (!item.accountId) continue;
 
-    // 1. Crea la transazione
+    const nextDate = calcNextDate(item.nextDate, item.cadence);
+    const shouldDelete = !!(item.endDate && nextDate > item.endDate);
+
+    // Idempotenza via optimistic locking:
+    // Avanziamo nextDate usando il valore CORRENTE come condizione WHERE.
+    // Se un altro processo ha già avanzato la data, updateMany restituisce count=0 → skip.
+    // Nota: avanziamo sempre nextDate (anche se poi elimineremo il record) per "reclamare" l'item.
+    const claimed = await prisma.recurringItem.updateMany({
+      where: { id: item.id, nextDate: item.nextDate },
+      data: { nextDate },
+    });
+
+    if (claimed.count === 0) continue; // già processata da una richiesta concorrente
+
+    // Crea la transazione solo se abbiamo "vinto" la race
     await prisma.transaction.create({
       data: {
         workspaceId: item.workspaceId,
@@ -37,28 +66,9 @@ export async function processOverdueRecurring(workspaceId: string): Promise<numb
       },
     });
 
-    // 2. Calcola la prossima data
-    let nextDate = new Date(item.nextDate);
-    const day = nextDate.getDate();
-
-    if (item.cadence === 'weekly') {
-      nextDate.setDate(nextDate.getDate() + 7);
-    } else if (item.cadence === 'monthly') {
-      nextDate.setMonth(nextDate.getMonth() + 1);
-      if (nextDate.getDate() !== day) nextDate.setDate(0); // gestione fine mese (es. 31 gen -> 28 feb)
-    } else if (item.cadence === 'yearly') {
-      nextDate.setFullYear(nextDate.getFullYear() + 1);
-      if (nextDate.getDate() !== day) nextDate.setDate(0);
-    }
-
-    // 3. Se la prossima occorrenza supera la data di fine, elimina la ricorrenza
-    if (item.endDate && nextDate > item.endDate) {
+    // Se la prossima occorrenza supera endDate, elimina la ricorrenza
+    if (shouldDelete) {
       await prisma.recurringItem.delete({ where: { id: item.id } });
-    } else {
-      await prisma.recurringItem.update({
-        where: { id: item.id },
-        data: { nextDate },
-      });
     }
 
     processedCount++;

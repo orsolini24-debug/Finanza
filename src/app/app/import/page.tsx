@@ -34,12 +34,23 @@ export default function ImportPage() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0]
     if (uploadedFile) {
+      if (uploadedFile.size > 5 * 1024 * 1024) {
+        alert('File troppo grande. Dimensione massima: 5 MB.')
+        e.target.value = ''
+        return
+      }
       setFile(uploadedFile)
       Papa.parse(uploadedFile, {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
-          setData(results.data as CSVRow[])
+          const rows = results.data as CSVRow[]
+          if (rows.length === 0) {
+            alert('Il file CSV non contiene righe di dati. Controlla il file e riprova.')
+            e.target.value = ''
+            return
+          }
+          setData(rows)
           setHeaders(results.meta.fields || [])
           setStep(2)
         },
@@ -107,15 +118,29 @@ export default function ImportPage() {
         Scegli File
       </label>
       
-      <div className="mt-8 flex gap-6 z-10">
-        <div className="flex items-center gap-2 text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest">
-          <ShieldCheck size={14} className="text-[var(--income)]" />
-          SSL Sicuro
+      <div className="mt-8 flex flex-col items-center gap-4 z-10">
+        <div className="flex gap-6">
+          <div className="flex items-center gap-2 text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest">
+            <ShieldCheck size={14} className="text-[var(--income)]" />
+            SSL Sicuro
+          </div>
+          <div className="flex items-center gap-2 text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest">
+            <FileText size={14} />
+            Formato CSV
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest">
-          <FileText size={14} />
-          Formato CSV
-        </div>
+        <p className="text-[11px] text-[var(--fg-muted)] font-medium text-center max-w-sm">
+          Il CSV deve avere colonne: <span className="font-bold text-[var(--fg-primary)]">data, importo, descrizione</span> (i nomi esatti non importano, li mapperai nel prossimo step).
+        </p>
+        <a
+          href="data:text/csv;charset=utf-8,Data,Importo,Descrizione,Beneficiario%0A2026-03-01,-45.50,Supermercato Conad,Conad%0A2026-03-03,1800.00,Stipendio Marzo,Azienda SRL"
+          download="template-import.csv"
+          className="text-[11px] font-bold text-[var(--accent)] hover:underline flex items-center gap-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <FileText size={12} />
+          Scarica template CSV di esempio
+        </a>
       </div>
     </div>
   )

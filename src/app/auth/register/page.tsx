@@ -10,15 +10,25 @@ import { registerUser } from '@/app/actions/auth'
 export default function RegisterPage() {
   const router = useRouter()
   const [error, setError] = useState('')
+  const [passwordError, setPasswordError] = useState('')
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState<'form' | 'success'>('form')
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setLoading(true)
     setError('')
+    setPasswordError('')
 
     const formData = new FormData(e.currentTarget)
+    const password = formData.get('password') as string
+    const confirmPassword = formData.get('confirmPassword') as string
+
+    if (password !== confirmPassword) {
+      setPasswordError('Le password non coincidono')
+      return
+    }
+
+    setLoading(true)
 
     try {
       await registerUser(formData)
@@ -143,9 +153,12 @@ export default function RegisterPage() {
                   name="confirmPassword"
                   required
                   placeholder="Ripeti la password"
-                  className="w-full pl-12 pr-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--fg-primary)] transition-all font-medium placeholder:text-[var(--fg-subtle)]/50"
+                  className={`w-full pl-12 pr-4 py-4 bg-[var(--bg-input)] border rounded-2xl focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--fg-primary)] transition-all font-medium placeholder:text-[var(--fg-subtle)]/50 ${passwordError ? 'border-[var(--expense)]' : 'border-[var(--border-default)]'}`}
                 />
               </div>
+              {passwordError && (
+                <p className="text-[11px] text-[var(--expense)] font-bold ml-1">{passwordError}</p>
+              )}
             </div>
 
             {error && (

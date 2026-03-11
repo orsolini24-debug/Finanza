@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Wallet, ChevronDown, ChevronUp, Droplets, PiggyBank, TrendingUp, Target, AlertTriangle, X } from 'lucide-react'
+import { Wallet, ChevronDown, ChevronUp, Droplets, PiggyBank, TrendingUp, Target, AlertTriangle, X, Info, HelpCircle } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import QuickAddTransaction from './QuickAddTransaction'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Tooltip } from '@/components/ui/Tooltip'
 
 interface DashboardHeaderProps {
   totalNetWorth: number
@@ -79,18 +80,29 @@ export function DashboardHeader({
                 exit={{ height: 0, opacity: 0 }}
                 className="px-8 pb-8 border-t border-[var(--border-subtle)] pt-8 bg-[var(--bg-elevated)]/10"
               >
+                <div className="mb-6 flex items-start gap-2 p-3 bg-[var(--bg-input)] rounded-xl border border-[var(--border-subtle)]">
+                  <Info size={13} className="text-[var(--accent)] shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-[var(--fg-muted)] leading-relaxed">
+                    I valori si popolano automaticamente dai <span className="font-bold text-[var(--fg-primary)]">tipi di conto</span> che crei.
+                    Es: crea un conto di tipo <span className="font-bold text-purple-400">Investimento</span> per Crypto/ETF,
+                    <span className="font-bold text-[var(--income)]"> Deposito</span> per i risparmi,
+                    <span className="font-bold text-[var(--expense)]"> Prestito</span> per i debiti.
+                  </p>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-4">
-                    <BreakdownRow label="Liquidità immediata" value={liquid} icon={<Droplets size={14} />} color="text-blue-400" sub="Conti correnti + Contanti" />
-                    <BreakdownRow label="Risparmi" value={savings} icon={<PiggyBank size={14} />} color="text-[var(--income)]" sub="Conti deposito" />
-                    <BreakdownRow label="Investimenti" value={investments} icon={<TrendingUp size={14} />} color="text-purple-400" sub="Azioni, Fondi, Crypto" />
+                    <BreakdownRow label="Liquidità immediata" value={liquid} icon={<Droplets size={14} />} color="text-blue-400" sub="Conti Corrente + Contanti" tooltip="Saldo disponibile subito. Comprende tutti i conti di tipo Corrente e Contanti." />
+                    <BreakdownRow label="Risparmi" value={savings} icon={<PiggyBank size={14} />} color="text-[var(--income)]" sub="Conti Deposito" tooltip="Saldo dei conti Deposito. Denaro accantonato ma non immediatamente spendibile." />
+                    <BreakdownRow label="Investimenti" value={investments} icon={<TrendingUp size={14} />} color="text-purple-400" sub="Conti tipo Investimento (ETF, Crypto…)" tooltip="Valore dei conti di tipo Investimento: azioni, ETF, crypto, fondi. Crea un conto Investimento per popolare questa voce." />
                   </div>
                   <div className="space-y-4">
-                    <BreakdownRow label="Accantonato Obiettivi" value={-earmarked} icon={<Target size={14} />} color="text-[var(--warning)]" sub="Fondi bloccati per traguardi" />
-                    <BreakdownRow label="Debiti e Passività" value={debts} icon={<AlertTriangle size={14} />} color="text-[var(--expense)]" sub="Mutui, Prestiti, Carte" />
+                    <BreakdownRow label="Accantonato Obiettivi" value={-earmarked} icon={<Target size={14} />} color="text-[var(--warning)]" sub="Fondi bloccati per traguardi" tooltip="Somma degli importi già assegnati agli Obiettivi di risparmio. Viene sottratta dalla Liquidità Disponibile." />
+                    <BreakdownRow label="Debiti e Passività" value={debts} icon={<AlertTriangle size={14} />} color="text-[var(--expense)]" sub="Mutui, Prestiti, Carte" tooltip="Saldo dei conti Prestito e Mutuo. Di solito negativo perché rappresenta denaro che devi restituire." />
                     <div className="pt-4 mt-4 border-t border-[var(--border-subtle)]">
                       <div className="flex justify-between items-center">
-                        <span className="text-xs font-black uppercase text-[var(--fg-primary)]">Disponibile Reale</span>
+                        <Tooltip content="Liquidità immediata meno gli importi già destinati agli Obiettivi. È il denaro che puoi spendere senza intaccare i tuoi piani." side="top">
+                          <span className="text-xs font-black uppercase text-[var(--fg-primary)] cursor-help border-b border-dashed border-[var(--border-default)]">Disponibile Reale</span>
+                        </Tooltip>
                         <span className="text-xl font-mono font-black text-[var(--accent)]">{formatCurrency(available)}</span>
                       </div>
                     </div>
@@ -137,7 +149,7 @@ export function DashboardHeader({
   )
 }
 
-function BreakdownRow({ label, value, icon, color, sub }: any) {
+function BreakdownRow({ label, value, icon, color, sub, tooltip }: any) {
   return (
     <div className="flex items-start justify-between group">
       <div className="flex items-center gap-3">
@@ -145,7 +157,14 @@ function BreakdownRow({ label, value, icon, color, sub }: any) {
           {icon}
         </div>
         <div>
-          <p className="text-[11px] font-bold text-[var(--fg-primary)]">{label}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-[11px] font-bold text-[var(--fg-primary)]">{label}</p>
+            {tooltip && (
+              <Tooltip content={tooltip} side="right">
+                <HelpCircle size={11} className="text-[var(--fg-subtle)] cursor-help opacity-60 hover:opacity-100 transition-opacity" />
+              </Tooltip>
+            )}
+          </div>
           <p className="text-[9px] text-[var(--fg-muted)] font-medium">{sub}</p>
         </div>
       </div>

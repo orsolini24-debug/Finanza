@@ -2,14 +2,16 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
-import { TrendingUp, TrendingDown, Wallet, Receipt, Target, RefreshCw } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Receipt, Target, RefreshCw, HelpCircle } from "lucide-react";
 import { formatCurrency, cn } from "@/lib/utils";
 import { getCurrentMonth, getPeriodRange } from "@/lib/period";
 import { processOverdueRecurring } from "@/lib/process-recurring";
 import { getBudgetsWithSpending } from "@/app/actions/budgets";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { Tooltip } from "@/components/ui/Tooltip";
 import AIInsights from "@/components/dashboard/AIInsights";
 import { ChartCarousel } from "@/components/dashboard/ChartClient";
+import { createDefaultWorkspace } from "@/lib/workspace";
 
 export default async function Dashboard({
   searchParams
@@ -25,7 +27,26 @@ export default async function Dashboard({
 
   const userId = (session.user as any).id;
 
-  const workspace = await prisma.workspace.findFirst({
+  // Prima processa le ricorrenze scadute, poi carica il workspace con i dati freschi
+  const workspaceIdRow = await prisma.workspace.findFirst({
+    where: { members: { some: { userId } } },
+    select: { id: true }
+  });
+
+  if (!workspaceIdRow) {
+    try {
+      await createDefaultWorkspace(userId);
+      redirect("/app/dashboard");
+    } catch (error) {
+      console.error("Dashboard failed to auto-create workspace:", error);
+      return <div className="p-8">Nessun workspace trovato e creazione fallita. Contatta l'assistenza.</div>;
+    }
+  }
+
+  // Processa ricorrenti PRIMA del fetch principale così le transazioni sono già nel DB
+  await processOverdueRecurring(workspaceIdRow.id);
+
+  let workspace = await prisma.workspace.findFirst({
     where: { members: { some: { userId } } },
     include: {
       accounts: true,
@@ -42,10 +63,9 @@ export default async function Dashboard({
     },
   });
 
-  if (!workspace) return <div className="p-8">Nessun workspace trovato.</div>;
-
-  // SPRINT B: Trigger automatico ricorrenti scaduti
-  await processOverdueRecurring(workspace.id);
+  if (!workspace) {
+    return <div className="p-8">Nessun workspace trovato. Contatta l'assistenza.</div>;
+  }
 
   // Ricalcolo saldi reali per ogni account
   const accountsWithBalance = await Promise.all(workspace.accounts.map(async (acc) => {
@@ -155,10 +175,10 @@ export default async function Dashboard({
 
       {/* KPI Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard label="Saldo Periodo" value={formatCurrency(totalIncome + totalExpenses)} icon={<Wallet className="text-blue-400" />} color="blue" />
-        <StatCard label="Entrate" value={formatCurrency(totalIncome)} icon={<TrendingUp className="text-[var(--income)]" />} color="green" />
-        <StatCard label="Uscite" value={formatCurrency(Math.abs(totalExpenses))} icon={<TrendingDown className="text-[var(--expense)]" />} color="red" />
-        <StatCard label="Da Verificare" value={stagedCount.toString()} icon={<Receipt className="text-purple-400" />} color="purple" isWarning={stagedCount > 0} />
+        <StatCard label="Saldo Periodo" tooltip="Differenza netta tra entrate e uscite nel periodo selezionato. Positivo = risparmiato, negativo = speso di più." value={formatCurrency(totalIncome + totalExpenses)} icon={<Wallet className="text-blue-400" />} color="blue" />
+        <StatCard label="Entrate" tooltip="Somma di tutti i movimenti in entrata (positivi) del periodo. Stipendi, rimborsi, incassi." value={formatCurrency(totalIncome)} icon={<TrendingUp className="text-[var(--income)]" />} color="green" />
+        <StatCard label="Uscite" tooltip="Somma di tutti i movimenti in uscita (negativi) del periodo. Spese, bollette, abbonamenti." value={formatCurrency(Math.abs(totalExpenses))} icon={<TrendingDown className="text-[var(--expense)]" />} color="red" />
+        <StatCard label="Da Verificare" tooltip="Transazioni importate ma non ancora confermate. Controllale e confermale per includerle nelle statistiche." value={stagedCount.toString()} icon={<Receipt className="text-purple-400" />} color="purple" isWarning={stagedCount > 0} />
       </div>
 
       {/* AI Insights */}
@@ -252,7 +272,7 @@ export default async function Dashboard({
   );
 }
 
-function StatCard({ label, value, icon, color, isWarning }: any) {
+function StatCard({ label, value, icon, color, isWarning, tooltip }: any) {
   const colorMap: any = {
     blue: "bg-blue-500/10 text-blue-400 border-blue-500/20",
     green: "bg-[var(--income-dim)] text-[var(--income)] border-[var(--income)]/20",
@@ -264,7 +284,12 @@ function StatCard({ label, value, icon, color, isWarning }: any) {
       <div className="flex items-start justify-between mb-4">
         <div className={cn("p-3 rounded-2xl", colorMap[color])}>{icon}</div>
       </div>
-      <p className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest mb-1">{label}</p>
+      <Tooltip content={tooltip} side="bottom">
+        <p className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest mb-1 cursor-help inline-flex items-center gap-1">
+          {label}
+          {tooltip && <HelpCircle size={10} className="opacity-50" />}
+        </p>
+      </Tooltip>
       <p className="text-xl sm:text-2xl font-mono font-black tracking-tighter text-[var(--fg-primary)]">{value}</p>
     </div>
   )

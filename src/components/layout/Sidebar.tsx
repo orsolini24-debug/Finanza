@@ -17,10 +17,13 @@ import {
   RefreshCw,
   BarChart3,
   Menu,
-  X
+  X,
+  HelpCircle,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
+import HelpPanel from "@/components/help/HelpPanel";
+import OnboardingTour from "@/components/help/OnboardingTour";
 
 const navItems = [
   { name: "Dashboard", href: "/app/dashboard", icon: LayoutDashboard },
@@ -40,6 +43,8 @@ export default function Sidebar() {
   const searchParams = useSearchParams();
   const month = searchParams.get('month');
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [showTour, setShowTour] = useState(false);
 
   // Chiudi sidebar al cambio di route
   useEffect(() => {
@@ -107,7 +112,14 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 mt-auto border-t border-[var(--border-subtle)]">
+      <div className="p-4 mt-auto border-t border-[var(--border-subtle)] space-y-1">
+        <button
+          onClick={() => setShowHelp(true)}
+          className="w-full flex items-center gap-3 px-4 py-3 text-[var(--fg-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--accent)] rounded-xl transition-all duration-200 group"
+        >
+          <HelpCircle size={18} className="group-hover:scale-110 transition-transform shrink-0" />
+          <span className="text-sm font-medium">Guida & Aiuto</span>
+        </button>
         <button
           onClick={() => signOut()}
           className="w-full flex items-center gap-3 px-4 py-3 text-[var(--fg-muted)] hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-all duration-200 group"
@@ -121,6 +133,16 @@ export default function Sidebar() {
 
   return (
     <>
+      <HelpPanel
+        open={showHelp}
+        onClose={() => setShowHelp(false)}
+        onStartTour={() => setShowTour(true)}
+      />
+      <OnboardingTour
+        externalOpen={showTour}
+        onExternalClose={() => setShowTour(false)}
+      />
+
       {/* Hamburger button — visible only on mobile, inside header area */}
       <button
         onClick={() => setMobileOpen(true)}

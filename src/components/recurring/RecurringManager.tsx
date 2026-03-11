@@ -151,6 +151,11 @@ export default function RecurringManager({ items, categories, accounts }: Recurr
                       {item.isIncome ? '+' : '-'}{fmt(Number(item.amount))}
                     </p>
                     {isOverdue && <span className="text-[9px] font-black text-red-400 uppercase tracking-tighter bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20">SCADUTO</span>}
+                  {!isOverdue && (item as any).endDate && (() => {
+                    const end = new Date((item as any).endDate);
+                    const soon = new Date(); soon.setDate(soon.getDate() + 30);
+                    return end <= soon ? <span className="text-[9px] font-black text-yellow-400 uppercase tracking-tighter bg-yellow-500/10 px-1.5 py-0.5 rounded border border-yellow-500/20">ULTIMA</span> : null;
+                  })()}
                   </div>
                   
                   <button 
@@ -221,6 +226,14 @@ export default function RecurringManager({ items, categories, accounts }: Recurr
                     {new Date(item.nextDate).toLocaleDateString('it-IT')}
                   </span>
                 </div>
+                {(item as any).endDate && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-[var(--fg-muted)] font-medium">Fine il</span>
+                    <span className="font-bold text-[var(--warning)]">
+                      {new Date((item as any).endDate).toLocaleDateString('it-IT')}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <button 
@@ -316,6 +329,16 @@ export default function RecurringManager({ items, categories, accounts }: Recurr
                   <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest ml-1">Prima data *</label>
                   <input name="nextDate" type="date" defaultValue={editingItem ? new Date(editingItem.nextDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]} required className="w-full px-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl text-[var(--fg-primary)]" />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest ml-1">Data fine <span className="normal-case font-medium text-[var(--fg-muted)]">(opzionale — lascia vuoto per ricorrenza infinita)</span></label>
+                <input
+                  name="endDate"
+                  type="date"
+                  defaultValue={(editingItem as any)?.endDate ? new Date((editingItem as any).endDate).toISOString().split('T')[0] : ''}
+                  className="w-full px-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl text-[var(--fg-primary)]"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">

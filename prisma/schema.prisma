@@ -292,15 +292,16 @@ model Goal {
 }
 
 model RecurringItem {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
   name        String
   amount      Decimal
-  cadence     String   
+  cadence     String
   nextDate    DateTime
+  endDate     DateTime?
   categoryId  String?
   accountId   String?
-  isIncome    Boolean  @default(false)
+  isIncome    Boolean   @default(false)
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   category  Category?  @relation(fields: [categoryId], references: [id])

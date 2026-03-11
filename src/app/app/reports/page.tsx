@@ -104,15 +104,19 @@ export default async function ReportsPage() {
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5);
 
-  // Metriche
-  const avgSavings = historyData.reduce((s, d) => s + d.savings, 0) / historyData.length;
-  const bestMonth = [...historyData].sort((a, b) => b.savings - a.savings)[0];
-  const totalIncomePeriod = historyData.reduce((s, d) => s + d.income, 0);
-  const totalExpensesPeriod = historyData.reduce((s, d) => s + d.expenses, 0);
-  
-  // Problem #15 - Robust savings rate calculation
-  const savingsRate = totalIncomePeriod > 0 
-    ? Math.max(0, ((totalIncomePeriod - totalExpensesPeriod) / totalIncomePeriod) * 100) 
+  // Metriche — escludi mesi senza movimentazioni per evitare statistiche fuorvianti
+  const activeMonths = historyData.filter(d => d.income > 0 || d.expenses > 0);
+  const avgSavings = activeMonths.length > 0
+    ? activeMonths.reduce((s, d) => s + d.savings, 0) / activeMonths.length
+    : 0;
+  const bestMonth = activeMonths.length > 0
+    ? [...activeMonths].sort((a, b) => b.savings - a.savings)[0]
+    : null;
+  const totalIncomePeriod = activeMonths.reduce((s, d) => s + d.income, 0);
+  const totalExpensesPeriod = activeMonths.reduce((s, d) => s + d.expenses, 0);
+
+  const savingsRate = totalIncomePeriod > 0
+    ? Math.max(0, ((totalIncomePeriod - totalExpensesPeriod) / totalIncomePeriod) * 100)
     : 0;
 
   return (
@@ -128,7 +132,7 @@ export default async function ReportsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard label="Risparmio Medio" value={avgSavings} icon={<TrendingUp size={20} />} />
+        <MetricCard label="Risparmio Medio" value={activeMonths.length > 0 ? avgSavings : null} icon={<TrendingUp size={20} />} />
         <MetricCard label="Mese Migliore" value={bestMonth?.name || '-'} isText icon={<Target size={20} />} />
         <MetricCard label="Top Categoria" value={topCategories[0]?.name || '-'} isText icon={<PieChart size={20} />} />
         <MetricCard label="Tasso di Risparmio" value={`${Math.round(savingsRate)}%`} isText icon={<TrendingUp size={20} />} />
@@ -145,6 +149,12 @@ export default async function ReportsPage() {
 }
 
 function MetricCard({ label, value, isText, icon }: any) {
+  const displayValue = value === null || value === undefined
+    ? <span className="text-[var(--fg-subtle)] text-base font-medium italic">Dati insufficienti</span>
+    : typeof value === 'number' && !isText
+      ? formatCurrency(value)
+      : value;
+
   return (
     <div className="glass p-6 rounded-[2rem] border border-[var(--border-subtle)]">
       <div className="flex items-center gap-3 mb-3 text-[var(--fg-subtle)]">
@@ -152,7 +162,7 @@ function MetricCard({ label, value, isText, icon }: any) {
         <span className="text-[10px] font-bold uppercase tracking-widest">{label}</span>
       </div>
       <p className="text-xl sm:text-2xl font-display font-black text-[var(--fg-primary)]">
-        {typeof value === 'number' && !isText ? formatCurrency(value) : value}
+        {displayValue}
       </p>
     </div>
   );

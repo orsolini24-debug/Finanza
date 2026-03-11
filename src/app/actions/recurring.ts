@@ -12,6 +12,8 @@ export async function createRecurringItem(formData: FormData) {
     const amount = parseFloat(formData.get('amount') as string);
     const cadence = formData.get('cadence') as string;
     const nextDate = new Date(formData.get('nextDate') as string);
+    const endDateStr = formData.get('endDate') as string;
+    const endDate = endDateStr ? new Date(endDateStr) : null;
     const categoryId = formData.get('categoryId') as string || null;
     const accountId = formData.get('accountId') as string || null;
     const isIncome = formData.get('isIncome') === 'true';
@@ -25,6 +27,7 @@ export async function createRecurringItem(formData: FormData) {
         amount,
         cadence,
         nextDate,
+        endDate,
         categoryId,
         accountId,
         isIncome,
@@ -47,6 +50,8 @@ export async function updateRecurringItem(id: string, formData: FormData) {
     const amount = parseFloat(formData.get('amount') as string);
     const cadence = formData.get('cadence') as string;
     const nextDate = new Date(formData.get('nextDate') as string);
+    const endDateStr = formData.get('endDate') as string;
+    const endDate = endDateStr ? new Date(endDateStr) : null;
     const categoryId = formData.get('categoryId') as string || null;
     const accountId = formData.get('accountId') as string || null;
     const isIncome = formData.get('isIncome') === 'true';
@@ -60,6 +65,7 @@ export async function updateRecurringItem(id: string, formData: FormData) {
         amount,
         cadence,
         nextDate,
+        endDate,
         categoryId,
         accountId,
         isIncome,
@@ -99,7 +105,6 @@ export async function executeRecurring(id: string) {
     });
     if (!item) throw new Error("Elemento non trovato");
 
-    // Problem #11 - Validate accountId
     if (!item.accountId) throw new Error("Conto non configurato per questa ricorrenza");
 
     // 1. Crea la transazione
@@ -115,29 +120,29 @@ export async function executeRecurring(id: string) {
       },
     });
 
-    // 2. Calcola la prossima data (Problem #19 - February edge case)
+    // 2. Calcola la prossima data
     let nextDate = new Date(item.nextDate);
     const day = nextDate.getDate();
 
     if (item.cadence === 'weekly') {
       nextDate.setDate(nextDate.getDate() + 7);
     } else if (item.cadence === 'monthly') {
-      // Safe monthly addition: if we are at Jan 31st, next is Feb 28/29th
       nextDate.setMonth(nextDate.getMonth() + 1);
-      if (nextDate.getDate() !== day) {
-        nextDate.setDate(0); // Move to last day of previous month
-      }
+      if (nextDate.getDate() !== day) nextDate.setDate(0);
     } else if (item.cadence === 'yearly') {
       nextDate.setFullYear(nextDate.getFullYear() + 1);
-      if (nextDate.getDate() !== day) {
-        nextDate.setDate(0);
-      }
+      if (nextDate.getDate() !== day) nextDate.setDate(0);
     }
 
-    await prisma.recurringItem.update({
-      where: { id },
-      data: { nextDate },
-    });
+    // 3. Se la prossima occorrenza supera endDate, elimina la ricorrenza
+    if (item.endDate && nextDate > item.endDate) {
+      await prisma.recurringItem.delete({ where: { id } });
+    } else {
+      await prisma.recurringItem.update({
+        where: { id },
+        data: { nextDate },
+      });
+    }
 
     revalidatePath('/app/recurring');
     revalidatePath('/app/dashboard');

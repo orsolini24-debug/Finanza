@@ -8,7 +8,7 @@ import { completeOnboarding } from '@/app/actions/auth'
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const { data: session, update } = useSession()
+  const { data: session } = useSession()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -22,13 +22,14 @@ export default function OnboardingPage() {
     const formData = new FormData(e.currentTarget)
 
     try {
+      // 1. Chiamiamo l'azione server per salvare i dati
       await completeOnboarding(formData)
-      // Aggiorna sessione per riflettere isOnboarded = true
-      await update({ isOnboarded: true })
-      router.push('/app/dashboard')
+      
+      // 2. Redirect brutale per uscire dalla pagina e resettare lo stato
+      window.location.href = '/app/dashboard'
     } catch (err: any) {
-      setError(err.message || 'Errore durante il salvataggio')
-    } finally {
+      console.error("Onboarding client error:", err)
+      setError(err.message || 'Errore durante il salvataggio. Riprova.')
       setLoading(false)
     }
   }
@@ -107,8 +108,7 @@ export default function OnboardingPage() {
                 fd.set('displayName', defaultName || 'Utente')
                 try {
                   await completeOnboarding(fd)
-                  await update({ isOnboarded: true })
-                  router.push('/app/dashboard')
+                  window.location.href = '/app/dashboard'
                 } catch {
                   setLoading(false)
                 }

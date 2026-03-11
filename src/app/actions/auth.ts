@@ -4,41 +4,7 @@ import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-
-const DEFAULT_CATEGORIES = [
-  { name: "Stipendio", type: "INCOME" as const },
-  { name: "Freelance", type: "INCOME" as const },
-  { name: "Affitto", type: "EXPENSE" as const },
-  { name: "Spesa alimentare", type: "EXPENSE" as const },
-  { name: "Trasporti", type: "EXPENSE" as const },
-  { name: "Svago", type: "EXPENSE" as const },
-  { name: "Salute", type: "EXPENSE" as const },
-  { name: "Abbonamenti", type: "EXPENSE" as const },
-  { name: "Casa", type: "EXPENSE" as const },
-  { name: "Altro", type: "BOTH" as const },
-];
-
-async function createDefaultWorkspace(userId: string) {
-  // Crea ogni record separatamente per evitare transazioni con nested writes
-  // che possono fallire con il Neon serverless adapter
-  const workspace = await prisma.workspace.create({
-    data: { name: "Personale" },
-  });
-
-  await prisma.workspaceMember.create({
-    data: { workspaceId: workspace.id, userId, role: "OWNER" },
-  });
-
-  await prisma.category.createMany({
-    data: DEFAULT_CATEGORIES.map((cat) => ({
-      workspaceId: workspace.id,
-      name: cat.name,
-      type: cat.type,
-    })),
-  });
-
-  return workspace;
-}
+import { createDefaultWorkspace } from "@/lib/workspace";
 
 export async function registerUser(formData: FormData) {
   const email = (formData.get('email') as string)?.trim().toLowerCase();
@@ -115,17 +81,22 @@ export async function completeOnboarding(formData: FormData) {
     },
   });
 
-  // Crea workspace se mancante (utenti con registrazione parziale)
+  console.log(`[completeOnboarding] User ${userId} marked as onboarded.`);
+
+  // Cerchiamo di creare il workspace se manca, ma non blocchiamo l'utente se fallisce
+  // La dashboard lo farà comunque come fallback di emergenza.
   const existing = await prisma.workspace.findFirst({
     where: { members: { some: { userId } } },
   });
 
   if (!existing) {
     try {
+      console.log(`[completeOnboarding] No workspace found for user ${userId}. Creating default...`);
       await createDefaultWorkspace(userId);
+      console.log(`[completeOnboarding] Workspace created successfully for ${userId}.`);
     } catch (err: any) {
-      console.error('[completeOnboarding] workspace creation failed:', err?.message, err?.kind, err?.code);
-      throw new Error("Errore durante la creazione del workspace. Riprova.");
+      console.error('[completeOnboarding] workspace creation failed, user will still proceed:', err?.message);
+      // NON lanciamo l'errore qui per evitare di bloccare l'onboarding se il DB ha latenza
     }
   }
 

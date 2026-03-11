@@ -201,3 +201,23 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Safe area per notch iPhone e gesture bar Android */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+
+/* Previeni zoom iOS su input < 16px */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Touch action: elimina ritardo 300ms su tap mobile */
+button, a, [role="button"] {
+  touch-action: manipulation;
+}

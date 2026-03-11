@@ -97,7 +97,7 @@ export default function Sidebar() {
               <Link
                 href={href}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group w-full",
+                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group w-full focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none",
                   isActive
                     ? "bg-[var(--accent-dim)] text-[var(--accent)] border-l-2 border-[var(--accent)]"
                     : "text-[var(--fg-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--fg-primary)]"

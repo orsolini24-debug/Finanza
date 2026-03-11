@@ -254,6 +254,7 @@ export default function TransactionsTable({ transactions, categories, accounts }
                           type="checkbox" 
                           checked={selectedTx.includes(tx.id)} 
                           onChange={() => toggleSelect(tx.id)} 
+                          aria-label={`Seleziona transazione ${tx.description}`}
                           className="w-4 h-4 rounded-md border-[var(--border-strong)] bg-transparent text-[var(--accent)] focus:ring-[var(--accent-dim)] accent-[var(--accent)] cursor-pointer" 
                         />
                       </div>

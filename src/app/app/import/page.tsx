@@ -215,14 +215,14 @@ export default function ImportPage() {
         </div>
 
         <div className="glass rounded-3xl overflow-hidden border border-[var(--border-subtle)]">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[400px] overflow-y-auto custom-scrollbar">
             <table className="w-full text-left border-collapse">
-              <thead>
+              <thead className="sticky top-0 z-10">
                 <tr className="bg-[var(--bg-elevated)] border-b border-[var(--border-subtle)]">
                   <th className="px-6 py-4 text-[10px] font-bold text-[var(--fg-muted)] uppercase tracking-widest">Data</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-[var(--fg-muted)] uppercase tracking-widest">Importo</th>
                   <th className="px-6 py-4 text-[10px] font-bold text-[var(--fg-muted)] uppercase tracking-widest">Descrizione</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-[var(--fg-muted)] uppercase tracking-widest">Beneficiario</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-[var(--fg-muted)] uppercase tracking-widest">Importo</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-[var(--fg-muted)] uppercase tracking-widest">Categoria</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-subtle)]">

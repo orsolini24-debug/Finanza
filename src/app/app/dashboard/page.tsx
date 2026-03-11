@@ -235,7 +235,7 @@ export default async function Dashboard({
               <div key={item.id} className="flex items-center justify-between p-3 bg-[var(--bg-elevated)]/50 rounded-2xl border border-[var(--border-subtle)]">
                 <div>
                   <p className="text-sm font-bold text-[var(--fg-primary)]">{item.name}</p>
-                  <p className="text-[10px] text-[var(--fg-muted)] font-medium uppercase">{new Date(item.nextDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</p>
+                  <p className="text-[10px] text-[var(--fg-muted)] font-medium uppercase whitespace-nowrap">{new Date(item.nextDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</p>
                 </div>
                 <p className={cn("font-mono font-bold text-sm", item.isIncome ? "text-[var(--income)]" : "text-[var(--expense)]")}>
                   {item.isIncome ? '+' : '-'}{formatCurrency(Number(item.amount))}

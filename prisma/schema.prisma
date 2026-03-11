@@ -33,6 +33,18 @@ enum TxStatus {
   CONFIRMED   // confermato dall’utente
 }
 
+enum PaymentMethod {
+  CASH            // Contanti
+  DEBIT_CARD      // Carta di Debito
+  CREDIT_CARD     // Carta di Credito
+  BANK_TRANSFER   // Bonifico Bancario
+  PAYPAL          // PayPal
+  CRYPTO          // Criptovalute
+  DIRECT_DEBIT    // Addebito Diretto (RID/SEPA)
+  CHECK           // Assegno
+  OTHER           // Altro
+}
+
 model User {
   id          String   @id @default(cuid())
   name        String?
@@ -146,18 +158,19 @@ model Payee {
 }
 
 model Transaction {
-  id          String    @id @default(cuid())
-  workspaceId String
-  accountId   String
-  payeeId     String?
-  date        DateTime
-  amount      Decimal   
-  currency    String    @default("EUR")
-  description String
-  status      TxStatus  @default(STAGED)
-  isTransfer  Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id            String         @id @default(cuid())
+  workspaceId   String
+  accountId     String
+  payeeId       String?
+  date          DateTime
+  amount        Decimal
+  currency      String         @default("EUR")
+  description   String
+  status        TxStatus       @default(STAGED)
+  isTransfer    Boolean        @default(false)
+  paymentMethod PaymentMethod?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   account   Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)

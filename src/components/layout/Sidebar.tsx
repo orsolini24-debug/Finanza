@@ -58,9 +58,9 @@ export default function Sidebar() {
   const monthParam = searchParams.get('month');
 
   const sidebarContent = (
-    <div className="flex flex-col h-full min-h-0 py-6 px-4">
+    <div className="flex-1 flex flex-col min-h-0 py-6 px-4">
       {/* Brand Logo */}
-      <div className="flex items-center gap-3.5 px-3 mb-12">
+      <div className="flex items-center gap-3.5 px-3 mb-6 shrink-0">
         <div className="w-11 h-11 bg-gradient-to-br from-[var(--accent)] to-[#0ec48e] rounded-[1.2rem] flex items-center justify-center shadow-[0_8px_20px_-4px_var(--glow-accent)] relative overflow-hidden group">
           <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <Wallet className="text-[var(--accent-on)] relative z-10" size={24} strokeWidth={2.5} />
@@ -111,7 +111,7 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer Actions */}
-      <div className="mt-auto pt-6 space-y-1 border-t border-[var(--border-subtle)]">
+      <div className="shrink-0 pt-4 space-y-1 border-t border-[var(--border-subtle)]">
         <button
           onClick={togglePrivacy}
           className={cn(
@@ -191,8 +191,8 @@ export default function Sidebar() {
 
       {/* Sidebar panel */}
       <div className={cn(
-        "fixed inset-y-0 left-0 z-40 w-[min(288px,85vw)] bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] shadow-2xl transition-transform duration-300 ease-in-out",
-        "md:static md:w-60 md:h-screen md:z-auto md:translate-x-0 md:flex md:flex-col",
+        "fixed inset-y-0 left-0 z-40 flex flex-col w-[min(288px,85vw)] bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] shadow-2xl transition-transform duration-300 ease-in-out",
+        "md:static md:w-60 md:h-screen md:z-auto md:translate-x-0",
         mobileOpen ? "translate-x-0" : "-translate-x-full"
       )} style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))' }}>
         {sidebarContent}

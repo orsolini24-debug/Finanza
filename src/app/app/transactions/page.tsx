@@ -49,7 +49,7 @@ export default async function TransactionsPage({
   const accounts = workspace.accounts.map(a => ({ ...a, openingBal: Number(a.openingBal) }));
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-display font-extrabold text-[var(--fg-primary)] tracking-tight">

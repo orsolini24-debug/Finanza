@@ -29,7 +29,7 @@ export default async function BudgetPage({
   const budgetData = await getBudgetsWithSpending(workspace.id, month);
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-1000">
+    <div className="space-y-10 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <div className="p-4 bg-[var(--accent)] rounded-[2rem] shadow-[0_0_30px_var(--glow-accent)] text-[var(--accent-on)]">

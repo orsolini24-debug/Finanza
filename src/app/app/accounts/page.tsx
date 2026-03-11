@@ -44,7 +44,7 @@ export default async function AccountsPage() {
   const totalNetWorth = accountsWithBalances.reduce((sum, acc) => sum + acc.balance, 0);
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-1000">
+    <div className="space-y-10 animate-in fade-in duration-500">
       {/* Header Row */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">

@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
-import { TrendingUp, TrendingDown, Wallet, Receipt, Target, RefreshCw, HelpCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Target, CalendarClock, PiggyBank, ClipboardCheck, HelpCircle } from "lucide-react";
 import { formatCurrency, cn } from "@/lib/utils";
 import { getCurrentMonth, getPeriodRange } from "@/lib/period";
 import { processOverdueRecurring } from "@/lib/process-recurring";
@@ -76,6 +76,24 @@ export default async function Dashboard({
     const balance = Number(acc.openingBal) + Number(aggregate._sum.amount || 0);
     return { ...acc, balance };
   }));
+
+  // Empty state: nessun conto configurato
+  if (accountsWithBalance.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto flex flex-col items-center justify-center min-h-[60vh] gap-8 animate-in fade-in duration-500">
+        <div className="text-center space-y-4">
+          <div className="text-6xl">🏦</div>
+          <h2 className="text-2xl font-display font-bold text-[var(--fg-primary)]">Nessun conto configurato</h2>
+          <p className="text-[var(--fg-muted)] font-medium max-w-sm">
+            Aggiungi il tuo primo conto bancario per iniziare a tracciare le tue finanze.
+          </p>
+          <a href="/app/accounts" className="inline-flex items-center gap-2 px-6 py-3 bg-[var(--accent)] text-[var(--accent-on)] font-bold rounded-2xl hover:shadow-[0_0_20px_var(--glow-accent)] transition-all">
+            Aggiungi Conto
+          </a>
+        </div>
+      </div>
+    )
+  }
 
   // SPRINT E: Calcolo liquidità
   const liquidBalance = accountsWithBalance
@@ -179,7 +197,7 @@ export default async function Dashboard({
         <StatCard label="Saldo Periodo" tooltip="Differenza netta tra entrate e uscite nel periodo selezionato. Positivo = risparmiato, negativo = speso di più." value={formatCurrency(totalIncome + totalExpenses)} icon={<Wallet className="text-blue-400" />} color="blue" />
         <StatCard label="Entrate" tooltip="Somma di tutti i movimenti in entrata (positivi) del periodo. Stipendi, rimborsi, incassi." value={formatCurrency(totalIncome)} icon={<TrendingUp className="text-[var(--income)]" />} color="green" />
         <StatCard label="Uscite" tooltip="Somma di tutti i movimenti in uscita (negativi) del periodo. Spese, bollette, abbonamenti." value={formatCurrency(Math.abs(totalExpenses))} icon={<TrendingDown className="text-[var(--expense)]" />} color="red" />
-        <StatCard label="Da Verificare" tooltip="Transazioni importate ma non ancora confermate. Controllale e confermale per includerle nelle statistiche." value={stagedCount.toString()} icon={<Receipt className="text-purple-400" />} color="purple" isWarning={stagedCount > 0} />
+        <StatCard label="Da Verificare" tooltip="Transazioni importate ma non ancora confermate. Controllale e confermale per includerle nelle statistiche." value={stagedCount.toString()} icon={<ClipboardCheck className="text-purple-400" />} color="purple" isWarning={stagedCount > 0} />
       </div>
 
       {/* AI Insights */}
@@ -200,7 +218,7 @@ export default async function Dashboard({
         <div className="glass p-5 sm:p-6 lg:p-8 rounded-[2rem] md:rounded-[2.5rem] border-2 border-[var(--warning)]/10 flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl md:text-2xl font-display font-bold text-[var(--fg-primary)]">Budget</h2>
-            <Target size={20} className="text-[var(--warning)]" />
+            <PiggyBank size={20} className="text-[var(--warning)]" />
           </div>
           <div className="flex-1 space-y-6">
             {topBudgets.map((b) => (
@@ -228,7 +246,7 @@ export default async function Dashboard({
         <div className="glass p-5 sm:p-6 lg:p-8 rounded-[2rem] md:rounded-[3rem]">
           <div className="flex items-center justify-between mb-4 md:mb-6">
             <h2 className="text-xl md:text-2xl font-display font-bold text-[var(--fg-primary)]">Scadenze</h2>
-            <RefreshCw size={20} className="text-[var(--accent)]" />
+            <CalendarClock size={20} className="text-[var(--accent)]" />
           </div>
           <div className="space-y-4">
             {workspace.recurring.map(item => (

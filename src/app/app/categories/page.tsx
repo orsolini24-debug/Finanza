@@ -16,7 +16,7 @@ export default async function CategoriesPage() {
   if (!workspace) return <div className="p-8">Nessun workspace trovato. Contatta l'assistenza.</div>;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-display font-extrabold text-[var(--fg-primary)] tracking-tight">

@@ -50,14 +50,26 @@ export function DashboardHeader({
     return 'Buonasera'
   })()
 
+  const todayLabel = (() => {
+    return new Date().toLocaleDateString('it-IT', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+  })()
+
   return (
     <div className="space-y-6">
       {userName && (
-        <div className="flex items-center gap-2 px-1">
-          <span className="text-xl">👋</span>
-          <p className="text-lg font-display font-bold text-[var(--fg-primary)]">
-            {greeting}, <span className="text-[var(--accent)]">{userName}</span>!
-          </p>
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">👋</span>
+            <p className="text-lg font-display font-bold text-[var(--fg-primary)]">
+              {greeting}, <span className="text-[var(--accent)]">{userName}</span>!
+            </p>
+          </div>
+          <p className="text-xs text-[var(--fg-muted)] font-medium capitalize hidden sm:block">{todayLabel}</p>
         </div>
       )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">

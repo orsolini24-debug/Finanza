@@ -37,11 +37,23 @@ export default async function Dashboard({
 
   if (!workspaceIdRow) {
     try {
+      // Verifica se l'utente esiste davvero nel DB prima di creare il workspace
+      const userExists = await prisma.user.findUnique({ where: { id: userId } });
+      if (!userExists) {
+        return (
+          <div className="p-8 text-center">
+            <h2 className="text-xl font-bold text-[var(--expense)] mb-4">Sessione non valida</h2>
+            <p className="text-[var(--fg-muted)] mb-6">Il database è stato resettato. Per favore, esegui il logout e registrati di nuovo.</p>
+            <a href="/api/auth/signout" className="px-6 py-2 bg-[var(--accent)] text-white rounded-xl">Esegui Logout</a>
+          </div>
+        );
+      }
+
       await createDefaultWorkspace(userId);
       redirect("/app/dashboard");
     } catch (error) {
       console.error("Dashboard failed to auto-create workspace:", error);
-      return <div className="p-8">Nessun workspace trovato e creazione fallita. Contatta l'assistenza.</div>;
+      return <div className="p-8">Errore durante la creazione dello spazio di lavoro. Riprova più tardi.</div>;
     }
   }
 

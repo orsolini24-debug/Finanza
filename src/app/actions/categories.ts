@@ -11,7 +11,8 @@ export async function createCategory(formData: FormData) {
 
     const name = (formData.get('name') as string)?.trim();
     const type = formData.get('type') as CategoryType || 'BOTH';
-    const parentId = formData.get('parentId') as string || null;
+    const parentId = (formData.get('parentId') as string) || null;
+    const icon = (formData.get('icon') as string) || null;
 
     if (!name) throw new Error("Nome categoria obbligatorio");
 
@@ -21,6 +22,7 @@ export async function createCategory(formData: FormData) {
         name,
         type,
         parentId,
+        icon,
       }
     });
 
@@ -39,7 +41,8 @@ export async function updateCategory(id: string, formData: FormData) {
 
     const name = (formData.get('name') as string)?.trim();
     const type = formData.get('type') as CategoryType || 'BOTH';
-    const parentId = formData.get('parentId') as string || null;
+    const parentId = (formData.get('parentId') as string) || null;
+    const icon = (formData.get('icon') as string) || null;
 
     if (!name) throw new Error("Nome categoria obbligatorio");
 
@@ -49,6 +52,7 @@ export async function updateCategory(id: string, formData: FormData) {
         name,
         type,
         parentId,
+        icon,
       }
     });
 

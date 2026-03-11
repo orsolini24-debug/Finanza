@@ -1,16 +1,16 @@
 import prisma from "@/lib/prisma";
 
 const DEFAULT_CATEGORIES = [
-  { name: "Stipendio", type: "INCOME" as const },
-  { name: "Freelance", type: "INCOME" as const },
-  { name: "Affitto", type: "EXPENSE" as const },
-  { name: "Spesa alimentare", type: "EXPENSE" as const },
-  { name: "Trasporti", type: "EXPENSE" as const },
-  { name: "Svago", type: "EXPENSE" as const },
-  { name: "Salute", type: "EXPENSE" as const },
-  { name: "Abbonamenti", type: "EXPENSE" as const },
-  { name: "Casa", type: "EXPENSE" as const },
-  { name: "Altro", type: "BOTH" as const },
+  { name: "Stipendio", type: "INCOME" as const, icon: "💰" },
+  { name: "Freelance", type: "INCOME" as const, icon: "💻" },
+  { name: "Affitto", type: "EXPENSE" as const, icon: "🏠" },
+  { name: "Spesa alimentare", type: "EXPENSE" as const, icon: "🛒" },
+  { name: "Trasporti", type: "EXPENSE" as const, icon: "🚗" },
+  { name: "Svago", type: "EXPENSE" as const, icon: "🎬" },
+  { name: "Salute", type: "EXPENSE" as const, icon: "🏥" },
+  { name: "Abbonamenti", type: "EXPENSE" as const, icon: "📱" },
+  { name: "Casa", type: "EXPENSE" as const, icon: "🛋️" },
+  { name: "Altro", type: "BOTH" as const, icon: "📦" },
 ];
 
 export async function createDefaultWorkspace(userId: string) {
@@ -30,7 +30,8 @@ export async function createDefaultWorkspace(userId: string) {
           createMany: {
             data: DEFAULT_CATEGORIES.map(cat => ({
               name: cat.name,
-              type: cat.type
+              type: cat.type,
+              icon: cat.icon
             }))
           }
         }

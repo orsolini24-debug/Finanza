@@ -1,6 +1,6 @@
 import Sidebar from "@/components/layout/Sidebar";
 import BottomNav from "@/components/layout/BottomNav";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import ThemeToggle from "@/components/ThemeToggle";
 import PeriodPicker from "@/components/layout/PeriodPicker";
 import { Suspense } from "react";
 

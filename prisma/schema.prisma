@@ -117,6 +117,7 @@ model Category {
   name        String
   type        CategoryType @default(BOTH)
   parentId    String?
+  icon        String?  // Emoji o nome icona Lucide
   createdAt   DateTime @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)

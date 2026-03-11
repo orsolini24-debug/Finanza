@@ -17,14 +17,17 @@ import {
   RefreshCw,
   LineChart,
   Menu,
-  X,
   HelpCircle,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import HelpPanel from "../help/HelpPanel";
 import OnboardingTour from "../help/OnboardingTour";
 import { Tooltip } from "../ui/Tooltip";
+import { motion } from "framer-motion";
+import { usePrivacy } from "../PrivacyProvider";
 
 const navItems = [
   { name: "Dashboard", href: "/app/dashboard", icon: LayoutDashboard, tooltip: "Panoramica generale: patrimonio netto, KPI mensili, AI Insights e grafici cash flow" },
@@ -45,6 +48,7 @@ export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showTour, setShowTour] = useState(false);
+  const { isPrivate, togglePrivacy } = usePrivacy();
 
   // Chiudi sidebar mobile al cambio route
   useEffect(() => {
@@ -56,33 +60,50 @@ export default function Sidebar() {
   const sidebarContent = (
     <div className="flex flex-col h-full py-6 px-4">
       {/* Brand Logo */}
-      <div className="flex items-center gap-3 px-2 mb-10">
-        <div className="w-10 h-10 bg-[var(--accent)] rounded-2xl flex items-center justify-center shadow-[0_0_20px_var(--glow-accent)]">
-          <Wallet className="text-[var(--accent-on)]" size={22} strokeWidth={2.5} />
+      <div className="flex items-center gap-3.5 px-3 mb-12">
+        <div className="w-11 h-11 bg-gradient-to-br from-[var(--accent)] to-[#0ec48e] rounded-[1.2rem] flex items-center justify-center shadow-[0_8px_20px_-4px_var(--glow-accent)] relative overflow-hidden group">
+          <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <Wallet className="text-[var(--accent-on)] relative z-10" size={24} strokeWidth={2.5} />
         </div>
-        <span className="font-display font-black text-xl tracking-tighter text-[var(--fg-primary)]">FINANZA</span>
+        <div className="flex flex-col">
+          <span className="font-display font-black text-xl tracking-[-0.04em] text-[var(--fg-primary)] leading-none">FINANZA</span>
+          <span className="text-[9px] font-black text-[var(--accent)] uppercase tracking-[0.2em] mt-1 opacity-80">Premium PFOS</span>
+        </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1.5 custom-scrollbar overflow-y-auto pr-1">
+      <nav className="flex-1 space-y-1 custom-scrollbar overflow-y-auto pr-1 text-left">
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/app/dashboard' && pathname.startsWith(item.href));
           const href = monthParam ? `${item.href}?month=${monthParam}` : item.href;
           
           const Icon = item.icon;
           return (
-            <Tooltip key={item.href} content={item.tooltip} side="right" delay={300}>
+            <Tooltip key={item.href} content={item.tooltip} side="right" delay={400}>
               <Link
                 href={href}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group w-full focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none",
+                  "flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group w-full outline-none",
                   isActive
-                    ? "bg-[var(--accent-dim)] text-[var(--accent)] border-l-2 border-[var(--accent)]"
+                    ? "bg-[var(--accent-dim)] text-[var(--accent)] shadow-[inset_0_0_0_1px_rgba(16,217,160,0.1)]"
                     : "text-[var(--fg-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--fg-primary)]"
                 )}
               >
-                <Icon size={18} className={cn("transition-transform group-hover:scale-110 shrink-0", isActive && "text-[var(--accent)]")} />
-                <span className="text-sm font-medium">{item.name}</span>
+                <div className={cn(
+                  "w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300",
+                  isActive ? "bg-[var(--accent)] text-[var(--accent-on)] shadow-lg" : "bg-transparent group-hover:bg-[var(--bg-surface)] group-hover:shadow-sm"
+                )}>
+                  <Icon size={18} strokeWidth={isActive ? 2.5 : 2} className={cn("transition-transform", isActive ? "scale-100" : "group-hover:scale-110")} />
+                </div>
+                <span className={cn("text-[13px] font-bold tracking-tight transition-colors", isActive ? "text-[var(--fg-primary)]" : "text-[var(--fg-muted)] group-hover:text-[var(--fg-primary)]")}>
+                  {item.name}
+                </span>
+                {isActive && (
+                  <motion.div 
+                    layoutId="sidebar-active"
+                    className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_10px_var(--glow-accent)]"
+                  />
+                )}
               </Link>
             </Tooltip>
           );
@@ -92,18 +113,49 @@ export default function Sidebar() {
       {/* Footer Actions */}
       <div className="mt-auto pt-6 space-y-1 border-t border-[var(--border-subtle)]">
         <button
-          onClick={() => setShowHelp(true)}
-          className="w-full flex items-center gap-3 px-4 py-3 text-[var(--fg-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--accent)] rounded-xl transition-all duration-200 group"
+          onClick={togglePrivacy}
+          className={cn(
+            "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300 group mb-1",
+            isPrivate ? "bg-orange-500/10 text-orange-400" : "text-[var(--fg-muted)] hover:bg-[var(--bg-elevated)]"
+          )}
         >
-          <HelpCircle size={18} className="group-hover:scale-110 transition-transform shrink-0" />
-          <span className="text-sm font-medium">Guida & Aiuto</span>
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "w-8 h-8 rounded-xl flex items-center justify-center transition-all",
+              isPrivate ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20" : "bg-transparent"
+            )}>
+              {isPrivate ? <EyeOff size={16} /> : <Eye size={16} />}
+            </div>
+            <span className="text-[13px] font-bold tracking-tight">{isPrivate ? 'Ghost Mode' : 'Ghost Mode'}</span>
+          </div>
+          <div className={cn(
+            "w-7 h-4 rounded-full relative transition-colors duration-300",
+            isPrivate ? "bg-orange-500" : "bg-[var(--border-strong)]"
+          )}>
+            <div className={cn(
+              "absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all duration-300 shadow-sm",
+              isPrivate ? "left-[14px]" : "left-0.5"
+            )} />
+          </div>
+        </button>
+
+        <button
+          onClick={() => setShowHelp(true)}
+          className="w-full flex items-center gap-3.5 px-4 py-3 text-[var(--fg-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--accent)] rounded-xl transition-all duration-200 group"
+        >
+          <div className="w-8 h-8 flex items-center justify-center">
+            <HelpCircle size={18} className="group-hover:scale-110 transition-transform shrink-0" />
+          </div>
+          <span className="text-[13px] font-bold tracking-tight">Guida & Aiuto</span>
         </button>
         <button
           onClick={() => signOut()}
-          className="w-full flex items-center gap-3 px-4 py-3 text-[var(--fg-muted)] hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-all duration-200 group"
+          className="w-full flex items-center gap-3.5 px-4 py-3 text-[var(--fg-muted)] hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-all duration-200 group"
         >
-          <LogOut size={18} className="group-hover:-translate-x-1 transition-transform shrink-0" />
-          <span className="text-sm font-medium">Esci</span>
+          <div className="w-8 h-8 flex items-center justify-center">
+            <LogOut size={18} className="group-hover:-translate-x-1 transition-transform shrink-0" />
+          </div>
+          <span className="text-[13px] font-bold tracking-tight">Esci</span>
         </button>
       </div>
     </div>

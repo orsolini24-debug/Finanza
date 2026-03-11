@@ -12,6 +12,8 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import AIInsights from "@/components/dashboard/AIInsights";
 import { ChartCarousel } from "@/components/dashboard/ChartClient";
 import { createDefaultWorkspace } from "@/lib/workspace";
+import { SafeToSpendCard } from "@/components/dashboard/SafeToSpendCard";
+import { Amount } from "@/components/ui/Amount";
 
 export default async function Dashboard({
   searchParams
@@ -160,6 +162,22 @@ export default async function Dashboard({
   const budgetData = await getBudgetsWithSpending(workspace.id, month);
   const topBudgets = [...budgetData].sort((a, b) => b.percentage - a.percentage).slice(0, 4);
 
+  // LOGICA SAFE-TO-SPEND (2026 Innovation)
+  const totalBudgetReserved = budgetData
+    .filter(b => b.category.type !== 'INCOME')
+    .reduce((s, b) => s + Math.max(0, Number(b.amount) - b.spent), 0);
+
+  const allRecurring = await prisma.recurringItem.findMany({
+    where: { workspaceId: workspace.id, isIncome: false }
+  });
+  const now = new Date();
+  const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const upcomingRecurringTotal = allRecurring
+    .filter(r => new Date(r.nextDate) >= now && new Date(r.nextDate) <= thirtyDaysFromNow)
+    .reduce((s, r) => s + Number(r.amount), 0);
+
+  const safeToSpend = liquidBalance - totalBudgetReserved - upcomingRecurringTotal;
+
   // Categories Pie (Spese del mese)
   const byCategory: Record<string, { name: string; amount: number }> = {};
   confirmedInPeriod.filter(t => Number(t.amount) < 0).forEach(tx => {
@@ -190,14 +208,24 @@ export default async function Dashboard({
         categories={serializedCategories}
         accounts={serializedAccounts}
         userName={session.user?.name || (session.user?.email?.split('@')[0]) || undefined}
+        workspaceId={workspace.id}
+        currentMonth={month}
+      />
+
+      {/* FASE 3: Safe-to-Spend Insight */}
+      <SafeToSpendCard 
+        amount={safeToSpend}
+        liquidBalance={liquidBalance}
+        budgetReserved={totalBudgetReserved}
+        upcomingExpenses={upcomingRecurringTotal}
       />
 
       {/* KPI Stats */}
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-        <StatCard label="Saldo Periodo" tooltip="Differenza netta tra entrate e uscite nel periodo selezionato. Positivo = risparmiato, negativo = speso di più." value={formatCurrency(totalIncome + totalExpenses)} icon={<Wallet className="text-blue-400" />} color="blue" />
-        <StatCard label="Entrate" tooltip="Somma di tutti i movimenti in entrata (positivi) del periodo. Stipendi, rimborsi, incassi." value={formatCurrency(totalIncome)} icon={<TrendingUp className="text-[var(--income)]" />} color="green" />
-        <StatCard label="Uscite" tooltip="Somma di tutti i movimenti in uscita (negativi) del periodo. Spese, bollette, abbonamenti." value={formatCurrency(Math.abs(totalExpenses))} icon={<TrendingDown className="text-[var(--expense)]" />} color="red" />
-        <StatCard label="Da Verificare" tooltip="Transazioni importate ma non ancora confermate. Controllale e confermale per includerle nelle statistiche." value={stagedCount.toString()} icon={<ClipboardCheck className="text-purple-400" />} color="purple" isWarning={stagedCount > 0} />
+        <StatCard label="Saldo Periodo" tooltip="Differenza netta tra entrate e uscite." value={<Amount value={totalIncome + totalExpenses} />} icon={<Wallet className="text-blue-400" />} color="blue" />
+        <StatCard label="Entrate" tooltip="Somma entrate del periodo." value={<Amount value={totalIncome} />} icon={<TrendingUp className="text-[var(--income)]" />} color="green" />
+        <StatCard label="Uscite" tooltip="Somma uscite del periodo." value={<Amount value={Math.abs(totalExpenses)} />} icon={<TrendingDown className="text-[var(--expense)]" />} color="red" />
+        <StatCard label="Da Verificare" tooltip="Transazioni non confermate." value={stagedCount.toString()} icon={<ClipboardCheck className="text-purple-400" />} color="purple" isWarning={stagedCount > 0} />
       </div>
 
       {/* AI Insights */}
@@ -255,9 +283,9 @@ export default async function Dashboard({
                   <p className="text-sm font-bold text-[var(--fg-primary)]">{item.name}</p>
                   <p className="text-[10px] text-[var(--fg-muted)] font-medium uppercase whitespace-nowrap">{new Date(item.nextDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</p>
                 </div>
-                <p className={cn("font-mono font-bold text-sm", item.isIncome ? "text-[var(--income)]" : "text-[var(--expense)]")}>
-                  {item.isIncome ? '+' : '-'}{formatCurrency(Number(item.amount))}
-                </p>
+                <div className={cn("font-mono font-bold text-sm", item.isIncome ? "text-[var(--income)]" : "text-[var(--expense)]")}>
+                  <Amount value={Number(item.amount)} prefix={item.isIncome ? '+' : '-'} hideLabel />
+                </div>
               </div>
             ))}
             {workspace.recurring.length === 0 && <p className="text-center text-[var(--fg-muted)] py-6 text-xs italic">Nessun pagamento ricorrente</p>}
@@ -280,7 +308,9 @@ export default async function Dashboard({
                     <p className="text-[10px] text-[var(--fg-muted)] font-medium uppercase">{new Date(tx.date).toLocaleDateString('it-IT')}</p>
                   </div>
                 </div>
-                <span className={cn("font-mono font-bold text-base tracking-tighter", Number(tx.amount) < 0 ? "text-[var(--expense)]" : "text-[var(--income)]")}>{Number(tx.amount) > 0 ? '+' : ''}{formatCurrency(Math.abs(Number(tx.amount)))}</span>
+                <div className={cn("font-mono font-bold text-base tracking-tighter", Number(tx.amount) < 0 ? "text-[var(--expense)]" : "text-[var(--income)]")}>
+                  <Amount value={Math.abs(Number(tx.amount))} prefix={Number(tx.amount) > 0 ? '+' : ''} hideLabel />
+                </div>
               </div>
             ))}
             {confirmedInPeriod.length === 0 && (
@@ -314,7 +344,7 @@ function StatCard({ label, value, icon, color, isWarning, tooltip }: any) {
           {tooltip && <HelpCircle size={10} className="opacity-50" />}
         </p>
       </Tooltip>
-      <p className="text-base sm:text-xl md:text-2xl font-mono font-black tracking-tighter text-[var(--fg-primary)] truncate">{value}</p>
+      <div className="text-base sm:text-xl md:text-2xl font-mono font-black tracking-tighter text-[var(--fg-primary)] truncate">{value}</div>
     </div>
   )
 }

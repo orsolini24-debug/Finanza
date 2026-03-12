@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Account, Category } from '@prisma/client'
 import RegisterTransferModal from './RegisterTransferModal'
+import { toast } from 'sonner'
 
 interface QuickAddTransactionProps {
   workspaceId: string

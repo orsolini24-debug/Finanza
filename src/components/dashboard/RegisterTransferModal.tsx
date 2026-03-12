@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Account } from '@prisma/client'
+import { toast } from 'sonner'
 
 interface RegisterTransferModalProps {
   accounts: Account[]

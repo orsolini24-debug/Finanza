@@ -43,8 +43,9 @@ export default async function ReportsPage() {
   const currentBalance = accountsWithBalances.reduce((sum, acc) => sum + acc.balance, 0);
 
   // Calcolo dati ultimi 6 mesi
+  // isTransfer: false esclude i bonifici interni (falserebbero entrate/uscite)
   const confirmedTxs = await prisma.transaction.findMany({
-    where: { workspaceId: workspace.id, status: 'CONFIRMED' }
+    where: { workspaceId: workspace.id, status: 'CONFIRMED', isTransfer: false }
   });
 
   const months = Array.from({ length: 6 }, (_, i) => {

@@ -167,8 +167,9 @@ model Transaction {
   currency      String         @default("EUR")
   description   String
   status        TxStatus       @default(STAGED)
-  isTransfer    Boolean        @default(false)
-  paymentMethod PaymentMethod?
+  isTransfer      Boolean        @default(false)
+  transferGroupId String?        // ID condiviso tra le due leg di un trasferimento
+  paymentMethod   PaymentMethod?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 

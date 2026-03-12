@@ -140,8 +140,10 @@ export default async function Dashboard({
   );
   const stagedCount = workspace.transactions.filter(t => t.status === 'STAGED').length;
 
-  const totalIncome = confirmedInPeriod.filter(t => Number(t.amount) > 0).reduce((s, t) => s + Number(t.amount), 0);
-  const totalExpenses = confirmedInPeriod.filter(t => Number(t.amount) < 0).reduce((s, t) => s + Number(t.amount), 0);
+  // Escludi i trasferimenti tra conti dai calcoli di entrate/uscite (si annullerebbero e falsano le statistiche)
+  const nonTransferInPeriod = confirmedInPeriod.filter(t => !t.isTransfer);
+  const totalIncome = nonTransferInPeriod.filter(t => Number(t.amount) > 0).reduce((s, t) => s + Number(t.amount), 0);
+  const totalExpenses = nonTransferInPeriod.filter(t => Number(t.amount) < 0).reduce((s, t) => s + Number(t.amount), 0);
   
   // Chart Data (Cash Flow del mese)
   const daysInMonth = new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate();
@@ -164,7 +166,8 @@ export default async function Dashboard({
 
   const monthlyData = await Promise.all(months.map(async (m) => {
     const { start: mStart, end: mEnd } = getPeriodRange(m);
-    const txs = workspace.transactions.filter(t => t.status === 'CONFIRMED' && t.date >= mStart && t.date <= mEnd);
+    // Escludi trasferimenti anche nei dati mensili
+    const txs = workspace.transactions.filter(t => t.status === 'CONFIRMED' && !t.isTransfer && t.date >= mStart && t.date <= mEnd);
     const inc = txs.filter(t => Number(t.amount) > 0).reduce((s, t) => s + Number(t.amount), 0);
     const exp = txs.filter(t => Number(t.amount) < 0).reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
     return { month: m, income: inc, expenses: exp, net: inc - exp };
@@ -190,9 +193,9 @@ export default async function Dashboard({
 
   const safeToSpend = liquidBalance - totalBudgetReserved - upcomingRecurringTotal;
 
-  // Categories Pie (Spese del mese)
+  // Categories Pie (Spese del mese — escludi trasferimenti)
   const byCategory: Record<string, { name: string; amount: number }> = {};
-  confirmedInPeriod.filter(t => Number(t.amount) < 0).forEach(tx => {
+  nonTransferInPeriod.filter(t => Number(t.amount) < 0).forEach(tx => {
     const key = tx.categoryId ?? '__uncategorized__';
     const name = tx.category?.name ?? 'Altro';
     if (!byCategory[key]) byCategory[key] = { name, amount: 0 };

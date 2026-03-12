@@ -9,14 +9,32 @@ export async function confirmTransactions(transactionIds: string[]) {
   try {
     const { workspace } = await getWorkspaceForUser();
 
+    // Recupera le transazioni richieste
+    const txs = await prisma.transaction.findMany({
+      where: { id: { in: transactionIds }, workspaceId: workspace.id },
+      select: { id: true, transferGroupId: true },
+    });
+
+    // Raccoglie i transferGroupId delle leg che fanno parte di un trasferimento,
+    // così da confermare automaticamente anche la controparte
+    const transferGroupIds = txs
+      .map(t => t.transferGroupId)
+      .filter((gid): gid is string => gid !== null);
+
+    const allIdsToConfirm = new Set(txs.map(t => t.id));
+
+    if (transferGroupIds.length > 0) {
+      // Trova le leg controparte non ancora incluse nella selezione
+      const counterparts = await prisma.transaction.findMany({
+        where: { transferGroupId: { in: transferGroupIds }, workspaceId: workspace.id },
+        select: { id: true },
+      });
+      counterparts.forEach(c => allIdsToConfirm.add(c.id));
+    }
+
     await prisma.transaction.updateMany({
-        where: {
-            id: { in: transactionIds },
-            workspaceId: workspace.id,
-        },
-        data: {
-            status: 'CONFIRMED',
-        }
+      where: { id: { in: [...allIdsToConfirm] }, workspaceId: workspace.id },
+      data:  { status: 'CONFIRMED' },
     });
 
     revalidatePath('/app/transactions');

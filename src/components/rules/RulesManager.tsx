@@ -7,6 +7,9 @@ import { createRule, updateRule, deleteRule, toggleRule } from '@/app/actions/ru
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import QuickCategoryModal from '@/components/categories/QuickCategoryModal'
+import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { useConfirm } from '@/hooks/useConfirm'
 
 type RuleWithCategory = Rule & { category: Category | null }
 
@@ -26,6 +29,7 @@ export default function RulesManager({ rules, categories }: RulesManagerProps) {
   const [showQuickCat, setShowQuickCat] = useState(false)
   const [localCategories, setLocalCategories] = useState<Category[]>([])
   const router = useRouter()
+  const { confirm, open, handleConfirm, handleCancel, message } = useConfirm()
 
   const allCategories = useMemo(() => {
     const merged = [...categories]
@@ -64,21 +68,24 @@ export default function RulesManager({ rules, categories }: RulesManagerProps) {
       try {
         if (editingRule) {
           await updateRule(editingRule.id, formData)
+          toast.success('Regola aggiornata')
         } else {
           await createRule(formData)
+          toast.success('Regola creata')
         }
         setShowModal(false)
         router.refresh()
       } catch (err: any) {
-        setError(err.message || 'Qualcosa è andato storto')
+        toast.error(err.message || 'Qualcosa è andato storto')
       }
     })
   }
 
-  const handleDelete = (rule: RuleWithCategory) => {
-    if (!confirm(`Eliminare la regola "${rule.name}"?`)) return
+  const handleDelete = async (rule: RuleWithCategory) => {
+    if (!await confirm(`Eliminare la regola "${rule.name}"?`)) return
     startTransition(async () => {
       await deleteRule(rule.id)
+      toast.success('Regola eliminata')
       router.refresh()
     })
   }
@@ -86,12 +93,19 @@ export default function RulesManager({ rules, categories }: RulesManagerProps) {
   const handleToggle = (rule: RuleWithCategory) => {
     startTransition(async () => {
       await toggleRule(rule.id, !rule.isEnabled)
+      toast.success(rule.isEnabled ? 'Regola disabilitata' : 'Regola abilitata')
       router.refresh()
     })
   }
 
   return (
     <div className="space-y-6">
+      <ConfirmDialog 
+        open={open} 
+        message={message} 
+        onConfirm={handleConfirm} 
+        onCancel={handleCancel} 
+      />
       {/* Quick Category Modal */}
       {showQuickCat && (
         <QuickCategoryModal

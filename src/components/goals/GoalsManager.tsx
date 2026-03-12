@@ -6,6 +6,10 @@ import { Plus, Target, Edit2, Trash2, X, Check, Loader2, TrendingUp, PiggyBank, 
 import { createGoal, updateGoal, deleteGoal } from '@/app/actions/goals'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import LottieAnimation from '@/components/ui/LottieAnimation'
+import { useConfirm } from '@/hooks/useConfirm'
 
 const GOAL_TYPES = [
   { value: 'savings', label: 'Risparmio', icon: PiggyBank, color: 'text-[var(--income)] bg-[var(--income-dim)]', border: 'border-[var(--income)]/20', bar: 'bg-[var(--income)]' },
@@ -29,6 +33,7 @@ export default function GoalsManager({ goals, accounts }: GoalsManagerProps) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const { confirm, open, handleConfirm, handleCancel, message } = useConfirm()
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -73,27 +78,41 @@ export default function GoalsManager({ goals, accounts }: GoalsManagerProps) {
       try {
         if (editingGoal) {
           await updateGoal(editingGoal.id, formData)
+          toast.success("Obiettivo aggiornato")
         } else {
           await createGoal(formData)
+          toast.success("Obiettivo creato")
         }
         setShowModal(false)
         router.refresh()
       } catch (err: any) {
-        setError(err.message || 'Something went wrong')
+        toast.error(err.message || 'Errore durante il salvataggio')
       }
     })
   }
 
-  const handleDelete = (goal: Goal) => {
-    if (!confirm(`Eliminare l'obiettivo "${goal.name}"?`)) return
-    startTransition(async () => {
-      await deleteGoal(goal.id)
-      router.refresh()
-    })
+  const handleDelete = async (goal: Goal) => {
+    if (await confirm(`Eliminare l'obiettivo "${goal.name}"?`)) {
+      startTransition(async () => {
+        try {
+          await deleteGoal(goal.id)
+          toast.success("Obiettivo eliminato")
+          router.refresh()
+        } catch (err: any) {
+          toast.error(err.message || "Errore durante l'eliminazione")
+        }
+      })
+    }
   }
 
   return (
     <div className="space-y-6">
+      <ConfirmDialog 
+        open={open} 
+        message={message} 
+        onConfirm={handleConfirm} 
+        onCancel={handleCancel} 
+      />
       <div className="flex justify-end">
         <button
           onClick={openCreate}
@@ -162,9 +181,12 @@ export default function GoalsManager({ goals, accounts }: GoalsManagerProps) {
                     />
                   </div>
                   {progress >= 100 && (
-                    <p className="text-[11px] font-bold text-[var(--income)] mt-1 flex items-center gap-1">
-                      🎯 Obiettivo raggiunto!
-                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <LottieAnimation animation="confetti" className="w-8 h-8" loop={false} />
+                      <p className="text-[11px] font-bold text-[var(--income)] flex items-center gap-1">
+                        🎯 Obiettivo raggiunto!
+                      </p>
+                    </div>
                   )}
                   <div className="flex justify-between text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest mt-3">   
                     <span>Scadenza</span>
@@ -177,11 +199,9 @@ export default function GoalsManager({ goals, accounts }: GoalsManagerProps) {
         })}
 
         {goals.length === 0 && (
-          <div className="col-span-full glass py-24 rounded-[3rem] border border-dashed flex flex-col items-center justify-center text-center">
-            <div className="w-20 h-20 bg-[var(--bg-elevated)] rounded-full flex items-center justify-center mb-6">
-              <Target className="w-10 h-10 text-[var(--fg-subtle)] opacity-50" />
-            </div>
-            <p className="text-[var(--fg-muted)] font-bold text-xl">Imposta il tuo primo obiettivo</p>
+          <div className="col-span-full glass py-16 rounded-[3rem] border border-dashed flex flex-col items-center justify-center text-center">
+            <LottieAnimation animation="catPlay" className="w-40 h-40" />
+            <p className="text-[var(--fg-muted)] font-bold text-xl mt-2">Imposta il tuo primo obiettivo</p>
             <p className="text-[var(--fg-subtle)] text-sm max-w-xs mt-3">Definisci i tuoi target finanziari e ti aiuteremo a monitorarli.</p>
           </div>
         )}

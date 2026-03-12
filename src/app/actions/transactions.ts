@@ -3,7 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { TxStatus } from "@prisma/client";
-import { getWorkspaceForUser } from "@/lib/auth-utils";
+import { getWorkspaceForUser, requireWorkspaceAccess } from "@/lib/auth-utils";
 
 export async function confirmTransactions(transactionIds: string[]) {
   try {
@@ -15,8 +15,6 @@ export async function confirmTransactions(transactionIds: string[]) {
       select: { id: true, transferGroupId: true },
     });
 
-    // Raccoglie i transferGroupId delle leg che fanno parte di un trasferimento,
-    // così da confermare automaticamente anche la controparte
     const transferGroupIds = txs
       .map(t => t.transferGroupId)
       .filter((gid): gid is string => gid !== null);
@@ -24,7 +22,6 @@ export async function confirmTransactions(transactionIds: string[]) {
     const allIdsToConfirm = new Set(txs.map(t => t.id));
 
     if (transferGroupIds.length > 0) {
-      // Trova le leg controparte non ancora incluse nella selezione
       const counterparts = await prisma.transaction.findMany({
         where: { transferGroupId: { in: transferGroupIds }, workspaceId: workspace.id },
         select: { id: true },
@@ -49,7 +46,6 @@ export async function deleteTransactions(transactionIds: string[]) {
   try {
     const { workspace } = await getWorkspaceForUser();
 
-    // Eseguito con chiamate separate (no $transaction — non supportato dal Neon serverless adapter)
     await prisma.transactionTag.deleteMany({
         where: { transactionId: { in: transactionIds } }
     });
@@ -103,22 +99,13 @@ export async function createTransaction(formData: FormData) {
     const dateStr = formData.get('date') as string;
     const categoryId = formData.get('categoryId') as string;
     const accountId = formData.get('accountId') as string;
-    const type = formData.get('type') as 'income' | 'expense';
 
     if (!description || !amountStr || !dateStr || !accountId) {
         throw new Error("Mancano campi obbligatori");
     }
 
     let amount = parseFloat(amountStr);
-    if (isNaN(amount) || amount <= 0) {
-      throw new Error("L'importo deve essere un numero positivo");
-    }
-
-    if (type === 'expense') {
-        amount = -Math.abs(amount);
-    } else {
-        amount = Math.abs(amount);
-    }
+    if (isNaN(amount)) throw new Error("Importo non valido");
 
     await prisma.transaction.create({
         data: {
@@ -150,7 +137,6 @@ export async function updateTransaction(id: string, formData: FormData) {
     const dateStr = formData.get('date') as string;
     const categoryId = formData.get('categoryId') as string;
     const accountId = formData.get('accountId') as string;
-    const type = formData.get('type') as 'income' | 'expense';
     const status = formData.get('status') as TxStatus;
 
     if (!description || !amountStr || !dateStr || !accountId) {
@@ -158,12 +144,7 @@ export async function updateTransaction(id: string, formData: FormData) {
     }
 
     let amount = parseFloat(amountStr);
-    if (isNaN(amount) || amount <= 0) {
-      throw new Error("L'importo deve essere un numero positivo");
-    }
-
-    if (type === 'expense') amount = -Math.abs(amount);
-    else amount = Math.abs(amount);
+    if (isNaN(amount)) throw new Error("Importo non valido");
 
     await prisma.transaction.update({
       where: { id, workspaceId: workspace.id },
@@ -187,6 +168,8 @@ export async function updateTransaction(id: string, formData: FormData) {
 }
 
 export async function getSuggestedRules(workspaceId: string) {
+  await requireWorkspaceAccess(workspaceId);
+  
   const transactions = await prisma.transaction.findMany({
     where: {
       workspaceId,

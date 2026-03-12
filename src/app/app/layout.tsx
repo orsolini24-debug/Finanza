@@ -4,6 +4,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import PeriodPicker from "@/components/layout/PeriodPicker";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { Suspense } from "react";
+import { Toaster } from 'sonner'
 
 export default async function AppLayout({
   children,
@@ -48,6 +49,7 @@ export default async function AppLayout({
       <Suspense fallback={null}>
         <BottomNav />
       </Suspense>
+      <Toaster position="bottom-right" richColors theme="dark" />
     </div>
   );
 }

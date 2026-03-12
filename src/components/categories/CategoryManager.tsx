@@ -1,12 +1,15 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { Category, CategoryType } from '@prisma/client'
 import { Plus, Edit2, Trash2, X, Check, Loader2, ChevronRight, Smile, Search } from 'lucide-react'
 import { createCategory, updateCategory, deleteCategory } from '@/app/actions/categories'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { useConfirm } from '@/hooks/useConfirm'
 
 type CategoryWithParent = Category & { parent: Category | null }
 
@@ -17,7 +20,7 @@ interface CategoryManagerProps {
 const EMOJI_MAP: Record<string, string> = {
   // Spesa e Alimentari
   'Spesa': '🛒', 'Supermercato': '🛒', 'Alimentari': '🛒', 'Lidl': '🛒', 'Conad': '🛒', 'Coop': '🛒', 'Esselunga': '🛒', 'Carrefour': '🛒', 'Penny': '🛒', 'MD': '🛒', 'Eurospin': '🛒', 'Pam': '🛒', 'Despar': '🛒', 'Gigante': '🛒',
-  'Panificio': '🥖', 'Pane': '🥖', 'Pasticceria': '🍰', 'Dolci': '🍩', 'Frutta': '🍎', 'Verdura': '🥗', 'Macelleria': '🥩', 'Pescheria': '🐟', 'Latte': '🥛', 'Uova': '🥚', 'Gastronomia': '🍱', 'Mercato': '🧺', 'Colazione': '🍳', 'Pranzo': '🍲', 'Cena': '🍲',
+  'Panificio': '🥖', 'Pane': '🥖', 'Pasticceria': '🍰', 'Dolci': '🍩', 'Frutta': '🍎', 'Verdura': '🥗', 'Macelleria': '🥩', 'Pescheria': '🐟', 'Latte': '🥛', 'Uova': '🥚', 'Gastronomia': '🍱', 'Mercato': '🧺', 'Pranzo': '🍲', 'Cena': '🍲',
 
   // Shopping e Abbigliamento
   'Shopping': '🛍️', 'Amazon': '🛍️', 'Vestiti': '👔', 'Abbigliamento': '👔', 'Scarpe': '👠', 'Regalo': '🎁', 'Zalando': '🛍️', 'Shein': '🛍️', 'Temu': '🛍️', 'H&M': '👔', 'Zara': '👔', 'Uniqlo': '👔', 'Nike': '👟', 'Adidas': '👟',
@@ -26,16 +29,16 @@ const EMOJI_MAP: Record<string, string> = {
 
   // Cibo e Drink
   'Cibo': '🍲', 'Ristorante': '🍲', 'Pizzeria': '🍕', 'Sushi': '🍣', 'Fast Food': '🍔', 'McDonald': '🍔', 'Burger King': '🍔', 'KFC': '🍗', 'Poke': '🍱', 'Trattoria': '🍲', 'Osteria': '🍷',
-  'Bar': '☕', 'Caffè': '☕', 'Aperitivo': '🍹', 'Birra': '🍺', 'Vino': '🍷', 'Pub': '🍺', 'Discoteca': '💃', 'Cocktail': '🍹', 'Gusti': '🍦', 'Gelato': '🍦', 'Starbucks': '☕', 'Nespresso': '☕',
+  'Bar': '☕', 'Caffè': '☕', 'Colazione': '🍳', 'Aperitivo': '🍹', 'Birra': '🍺', 'Vino': '🍷', 'Pub': '🍺', 'Discoteca': '💃', 'Cocktail': '🍹', 'Gusti': '🍦', 'Gelato': '🍦', 'Starbucks': '☕', 'Nespresso': '☕',
 
   // Salute e Benessere
   'Salute': '🏥', 'Medicina': '💊', 'Farmacia': '💊', 'Dentista': '🦷', 'Visita': '🏥', 'Dottore': '🏥', 'Ospedale': '🏥', 'Ottico': '👓', 'Occhiali': '👓', 'Lenti': '👓',
-  'Palestra': '💪', 'Sport': '💪', 'Piscina': '🏊', 'Tennis': '🎾', 'Calcetto': '⚽', 'Yoga': '🧘', 'Crossfit': '💪', 'Padel': '🎾', 'Running': '🏃', 'Corsa': '🏃', 'Calcio': '⚽', 'Basket': '🏀', 'Sci': '🎿', 'Snowboard': '🏂', 'Nuoto': '🏊',
+  'Palestra': '💪', 'Sport': '💪', 'Piscina': '🏊', 'Tennis': '🎾', 'Calcetto': '⚽', 'Yoga': '🧘', 'Crossfit': '💪', 'Padel': '🎾', 'Running': '🏃', 'Corsa': '🏃', 'Calcio': '⚽', 'Basket': '🏀', 'Snowboard': '🏂', 'Nuoto': '🏊',
   'Psicologo': '🧠', 'Terapia': '🧠', 'Massage': '🧖', 'Spa': '🧖', 'Benessere': '✨', 'Estetista': '💅', 'Barbiere': '💇', 'Parrucchiere': '💇',
 
   // Trasporti
-  'Trasporti': '🚗', 'Auto': '🚗', 'Benzina': '⛽', 'Carburante': '⛽', 'Diesel': '⛽', 'Parcheggio': '🅿️', 'Pedaggio': '🛣️', 'Autostrada': '🛣️', 'Telepass': '🛣️', 'Bollo': '⚖️', 'Meccanico': '🛠️', 'Revisione': '🛠️', 'Lavaggio': '🚿', 'Assicurazione': '🛡️',
-  'Treno': '🚆', 'Trenitalia': '🚆', 'Italo': '🚆', 'Autobus': '🚌', 'Bus': '🚌', 'Taxi': '🚕', 'Freenow': '🚕', 'Uber': '🚕', 'Metro': '🚇', 'Bicicletta': '🚲', 'Bici': '🚲', 'Monopattino': '🛴', 'Traghetto': '🚢', 'Volo': '✈️', 'Aereo': '✈️',
+  'Trasporti': '🚗', 'Auto': '🚗', 'Benzina': '⛽', 'Carburante': '⛽', 'Diesel': '⛽', 'Parcheggio': '🅿️', 'Pedaggio': '🛣️', 'Autostrada': '🛣️', 'Telepass': '🛣️', 'Meccanico': '🛠️', 'Revisione': '🛠️', 'Lavaggio': '🚿', 'Assicurazione': '🛡️',
+  'Treno': '🚆', 'Trenitalia': '🚆', 'Italo': '🚆', 'Autobus': '🚌', 'Bus': '🚌', 'Taxi': '🚕', 'Freenow': '🚕', 'Uber': '🚕', 'Metro': '🚇', 'Bicicletta': '🚲', 'Bici': '🚲', 'Monopattino': '🛴', 'Traghetto': '🚢',
 
   // Casa e Utenze
   'Casa': '🏠', 'Affitto': '🏠', 'Mutuo': '🏠', 'Condominio': '🏠', 'Arredamento': '🛋️', 'Mobili': '🛋️', 'Ikea': '🛋️', 'Leroy Merlin': '🛠️', 'Brico': '🛠️', 'Casalinghi': '🧺', 'Giardino': '🪴', 'Fiori': '💐',
@@ -53,11 +56,12 @@ const EMOJI_MAP: Record<string, string> = {
   // Lavoro e Finanza
   'Stipendio': '💰', 'Bonus': '💰', 'Premi': '💰', 'Freelance': '💻', 'Fattura': '📄', 'P.IVA': '💼', 'Rimborso': '💸', 'Vendita': '🏷️', 'Dividendi': '💎', 'Trading': '📈', 'Investimenti': '📈',
   'Banca': '🏦', 'Prestito': '🏦', 'Interessi': '📊', 'Commissioni': '💸', 'Crypto': '₿', 'Bitcoin': '₿', 'Ethereum': 'Ξ', 'Carta': '💳', 'Contanti': '💵', 'Ricarica': '📱',
-  'Tasse': '⚖️', 'Multa': '⚖️', 'Agenzia Entrate': '⚖️', 'IVA': '⚖️', 'IMU': '🏠', 'TARI': '🗑️',
+  'Tasse': '⚖️', 'Multa': '⚖️', 'Agenzia Entrate': '⚖️', 'Bollo': '⚖️', 'IVA': '⚖️', 'IMU': '🏠', 'TARI': '🗑️',
 
   // Famiglia e Sociale
   'Famiglia': '👫', 'Figli': '🧒', 'Bambini': '🧸', 'Scuola': '📚', 'Asilo': '🍼', 'Giocattoli': '🧸', 'Mensa': '🍱', 'Libri Scolastici': '📚', 'Babysitter': '👶',
   'Genitori': '👴', 'Compleanno': '🎂', 'Matrimonio': '💍', 'Festa': '🎉', 'Beneficenza': '🤝', 'Donazione': '❤️', 'Chiesa': '⛪',
+
 
   // Altro
   'Altro': '📦', 'Varie': '📦', 'Cura Personale': '🧴', 'Trucchi': '💄', 'Sapone': '🧼', 'Profumeria': '🧖',
@@ -70,7 +74,7 @@ const EMOJI_GROUPS: { label: string; emojis: string[] }[] = [
   { label: '🍕 Cibo & Drink', emojis: ['☕','🍕','🍷','🍣','🍔','🍦','🍰','🍹','🍺','🥖','🍎','🍳','🥗','🍩','🥐','🍗','🍜','🍱','🥨','🍪','🥤','🥞','🥓','🥩','🧀','🥛','🥚','🍲','💃'] },
   { label: '🚗 Trasporti & Viaggi', emojis: ['🚗','🚲','🛴','🛵','🚆','🚌','🚕','🚇','🚢','✈️','🏨','🏖️','🏔️','🗺️','🎫','⛽','🛣️','🅿️','🧳','🛂','⛺','🏂','🛡️','🛠️'] },
   { label: '🏠 Casa & Utenze', emojis: ['🏠','🛋️','🪴','🧹','🧼','🧴','🚿','🧺','🔑','🔒','🏡','🛌','🪑','🔨','🪛','🔧','💡','🔥','💧','🌐','📞','📺','🍿','❄️','⚡','🗑️','💐'] },
-  { label: '💊 Salute & Sport', emojis: ['💊','🦷','👓','🧘','⚽','🏀','🎾','🚴','🏊','🏐','🥊','🎿','⛸️','🏸','🏃','🥾','🏋️','⛳','🏄','🛹','🏹','🎣','🧗','🚵','🏥','🧠','💪','✨','💅','💇','🧖'] },
+  { label: '💊 Salute & Sport', emojis: ['💊','🦷','👓','🧘','⚽','🏀','🎾','🚴','🏊','🏐','🥊','🎿','⛸️','🏸','🏃','🥾','🏋️','⛳','🏄',' skateboard','🏹','🎣','🧗','🚵','🏥','🧠','💪','✨','💅','💇','🧖'] },
   { label: '🎮 Svago & Hobby', emojis: ['🍿','🎮','🎭','🎸','🎨','📸','🎹','🎻','🎤','🎲','🧩','🧵','🧶','🌳','🔭','♟️','🎷','🎺','🎧','📻','🎥','🃏','🎪','🎰','🎵','🏛️'] },
   { label: '💰 Lavoro & Finanza', emojis: ['💰','💻','📄','💼','📊','📉','💳','🏧','⚖️','💸','💎','₿','🏦','💵','🪙','🛡️','📣','📒','📈','🏷️','📠','🖋️','💼'] },
   { label: '🛍️ Shopping', emojis: ['🛍️','👔','👠','👟','🔌','📱','💿','🕹️','🔋','📚','🧴','💄','🧼','🎁'] },
@@ -119,8 +123,8 @@ export default function CategoryManager({ categories }: CategoryManagerProps) {
   const [showIconPicker, setShowIconPicker] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [isPending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const { confirm, open, handleConfirm, handleCancel, message } = useConfirm()
 
   const topLevel = categories.filter(c => !c.parentId)
 
@@ -128,7 +132,6 @@ export default function CategoryManager({ categories }: CategoryManagerProps) {
     setEditingCategory(null)
     setCategoryType('BOTH')
     setSelectedIcon('')
-    setError(null)
     setShowModal(true)
   }
 
@@ -136,20 +139,18 @@ export default function CategoryManager({ categories }: CategoryManagerProps) {
     setEditingCategory(cat)
     setCategoryType(cat.type || 'BOTH')
     setSelectedIcon(cat.icon || '')
-    setError(null)
     setShowModal(true)
   }
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setError(null)
     const formData = new FormData(e.currentTarget)
     formData.set('type', categoryType)
     formData.set('icon', selectedIcon)
 
     const name = (formData.get('name') as string)?.trim()
     if (!name) {
-      setError('Nome obbligatorio')
+      toast.error('Nome obbligatorio')
       return
     }
 
@@ -157,15 +158,31 @@ export default function CategoryManager({ categories }: CategoryManagerProps) {
       try {
         if (editingCategory) {
           await updateCategory(editingCategory.id, formData)
+          toast.success("Categoria aggiornata")
         } else {
           await createCategory(formData)
+          toast.success("Categoria creata")
         }
         setShowModal(false)
         router.refresh()
       } catch (err: any) {
-        setError(err.message || 'Qualcosa è andato storto')
+        toast.error(err.message || 'Qualcosa è andato storto')
       }
     })
+  }
+
+  const handleDelete = async (cat: CategoryWithParent) => {
+    if (await confirm(`Eliminare la categoria "${cat.name}"?`)) {
+      startTransition(async () => {
+        try {
+          await deleteCategory(cat.id)
+          toast.success("Categoria eliminata")
+          router.refresh()
+        } catch (err: any) {
+          toast.error(err.message || "Errore durante l'eliminazione")
+        }
+      })
+    }
   }
 
   const handleSelectEmoji = (emoji: string) => {
@@ -174,7 +191,6 @@ export default function CategoryManager({ categories }: CategoryManagerProps) {
     setSearchTerm('')
   }
 
-  // Search results
   const searchResults = searchTerm
     ? ALL_EMOJIS.filter(e =>
         EMOJI_SEARCH_INDEX[e]?.some(k => k.includes(searchTerm.toLowerCase()))
@@ -183,6 +199,13 @@ export default function CategoryManager({ categories }: CategoryManagerProps) {
 
   return (
     <div className="space-y-10">
+      <ConfirmDialog 
+        open={open} 
+        message={message} 
+        onConfirm={handleConfirm} 
+        onCancel={handleCancel} 
+      />
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-[var(--bg-elevated)]/30 p-6 rounded-[2.5rem] border border-[var(--border-subtle)]">
         <div>
           <h2 className="text-2xl font-display font-black text-[var(--fg-primary)] tracking-tight">Gestione Categorie</h2>
@@ -220,11 +243,8 @@ export default function CategoryManager({ categories }: CategoryManagerProps) {
                   <Edit2 className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => {
-                    if (confirm('Eliminare questa categoria?')) {
-                      deleteCategory(cat.id).then(() => router.refresh())
-                    }
-                  }}
+                  onClick={() => handleDelete(cat)}
+                  disabled={isPending}
                   className="p-2.5 bg-[var(--bg-elevated)] text-[var(--fg-muted)] hover:text-[var(--expense)] hover:border-[var(--expense)]/30 rounded-xl transition-all border border-[var(--border-subtle)] active:scale-90"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -233,7 +253,7 @@ export default function CategoryManager({ categories }: CategoryManagerProps) {
             </div>
 
             <div className="mt-6 relative z-10">
-              <h3 className="text-lg font-black text-[var(--fg-primary)] group-hover:text-[var(--accent)] transition-colors line-clamp-1 tracking-tight">
+              <h3 className="text-lg font-black text-[var(--fg-primary)] group-hover:text-[var(--accent)] transition-colors line-clamp-1 tracking-tight text-left">
                 {cat.name}
               </h3>
 
@@ -258,7 +278,6 @@ export default function CategoryManager({ categories }: CategoryManagerProps) {
         ))}
       </div>
 
-      {/* Category create/edit modal */}
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -275,20 +294,20 @@ export default function CategoryManager({ categories }: CategoryManagerProps) {
               exit={{ opacity: 0, scale: 0.9, y: 30 }}
               className="relative w-full max-w-md glass bg-[var(--bg-surface)] rounded-[3rem] border border-[var(--border-default)] shadow-[0_30px_60px_-12px_rgba(0,0,0,0.5)] overflow-hidden"
             >
-              <div className="flex justify-between items-center p-8 border-b border-[var(--border-subtle)]">
-                <div>
-                  <h2 className="text-2xl font-display font-black text-[var(--fg-primary)] tracking-tight">
+              <div className="flex justify-between items-center p-8 border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)]/30">
+                <div className="text-left">
+                  <h2 className="text-2xl font-display font-bold text-[var(--fg-primary)] tracking-tight">
                     {editingCategory ? 'Modifica' : 'Nuova Categoria'}
                   </h2>
                   <p className="text-[var(--fg-muted)] text-[10px] uppercase font-bold tracking-widest mt-1">Dati essenziali</p>
                 </div>
-                <button onClick={() => setShowModal(false)} className="text-[var(--fg-muted)] hover:text-[var(--fg-primary)] transition-all p-3 hover:bg-[var(--bg-elevated)] rounded-2xl">
-                  <X className="w-6 h-6" />
+                <button onClick={() => setShowModal(false)} className="text-[var(--fg-muted)] hover:text-[var(--fg-primary)] transition-all p-3 hover:bg-[var(--bg-elevated)] rounded-2xl border border-[var(--border-subtle)]">
+                  <X size={20} />
                 </button>
               </div>
               <form onSubmit={handleSubmit} className="p-8 space-y-6">
                 <div className="flex items-end gap-5">
-                  <div className="relative group">
+                  <div className="relative group text-left">
                     <label className="text-[10px] font-black text-[var(--fg-subtle)] uppercase tracking-widest ml-1 mb-2 block">Icona</label>
                     <button
                       type="button"
@@ -298,7 +317,7 @@ export default function CategoryManager({ categories }: CategoryManagerProps) {
                       {selectedIcon || <Smile className="text-[var(--fg-subtle)]" size={32} />}
                     </button>
                   </div>
-                  <div className="flex-1 space-y-2">
+                  <div className="flex-1 space-y-2 text-left">
                     <label className="text-[10px] font-black text-[var(--fg-subtle)] uppercase tracking-widest ml-1 block">Nome</label>
                     <input
                       name="name"
@@ -312,7 +331,7 @@ export default function CategoryManager({ categories }: CategoryManagerProps) {
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">
-                  <div className="space-y-2">
+                  <div className="space-y-2 text-left">
                     <label className="text-[10px] font-black text-[var(--fg-subtle)] uppercase tracking-widest ml-1 block">Tipo Flusso</label>
                     <div className="flex p-1.5 bg-[var(--bg-input)] rounded-[1.2rem] border-2 border-[var(--border-default)]">
                       {[
@@ -335,12 +354,12 @@ export default function CategoryManager({ categories }: CategoryManagerProps) {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 text-left">
                     <label className="text-[10px] font-black text-[var(--fg-subtle)] uppercase tracking-widest ml-1 block">Parent Category (Opzionale)</label>
                     <select
                       name="parentId"
                       defaultValue={editingCategory?.parentId ?? ''}
-                      className="w-full px-5 py-4 bg-[var(--bg-input)] border-2 border-[var(--border-default)] rounded-2xl focus:outline-none focus:border-[var(--accent)] text-[var(--fg-primary)] transition-all font-bold appearance-none cursor-pointer"
+                      className="w-full px-4 py-3 bg-[var(--bg-input)] border-2 border-[var(--border-default)] rounded-2xl focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--fg-primary)] transition-all font-bold appearance-none cursor-pointer"
                     >
                       <option value="">Nessuna (Top Level)</option>
                       {topLevel
@@ -352,13 +371,11 @@ export default function CategoryManager({ categories }: CategoryManagerProps) {
                   </div>
                 </div>
 
-                {error && <p className="text-[var(--expense)] text-sm font-bold">{error}</p>}
-
                 <div className="flex gap-4 pt-6">
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
-                    className="flex-1 px-6 py-4 text-[var(--fg-muted)] font-black text-[12px] uppercase tracking-widest bg-[var(--bg-elevated)] rounded-2xl transition-all hover:text-[var(--fg-primary)] active:scale-95"
+                    className="flex-1 px-6 py-4 text-[var(--fg-muted)] font-black text-[12px] uppercase tracking-widest bg-[var(--bg-elevated)] rounded-2xl transition-all hover:text-[var(--fg-primary)] active:scale-95 border border-[var(--border-subtle)]"
                   >
                     Annulla
                   </button>
@@ -377,7 +394,7 @@ export default function CategoryManager({ categories }: CategoryManagerProps) {
         )}
       </AnimatePresence>
 
-      {/* Icon picker modal — z-[200] to sit above the category modal */}
+      {/* Icon picker modal */}
       <AnimatePresence>
         {showIconPicker && (
           <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -396,7 +413,6 @@ export default function CategoryManager({ categories }: CategoryManagerProps) {
               className="relative w-full sm:max-w-lg flex flex-col glass bg-[var(--bg-surface)] rounded-t-[2.5rem] sm:rounded-[2.5rem] border border-[var(--border-default)] shadow-[0_30px_60px_-12px_rgba(0,0,0,0.5)] overflow-hidden"
               style={{ maxHeight: '80dvh' }}
             >
-              {/* Header */}
               <div className="flex items-center gap-3 p-5 border-b border-[var(--border-subtle)] shrink-0">
                 <Smile size={20} className="text-[var(--fg-muted)] shrink-0" />
                 <h3 className="text-base font-black text-[var(--fg-primary)] tracking-tight shrink-0">Scegli Icona</h3>
@@ -411,11 +427,7 @@ export default function CategoryManager({ categories }: CategoryManagerProps) {
                     onChange={e => setSearchTerm(e.target.value)}
                   />
                   {searchTerm && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchTerm('')}
-                      className="text-[var(--fg-muted)] hover:text-[var(--fg-primary)] transition-colors shrink-0"
-                    >
+                    <button type="button" onClick={() => setSearchTerm('')} className="text-[var(--fg-muted)] hover:text-[var(--fg-primary)] transition-colors shrink-0">
                       <X size={13} />
                     </button>
                   )}
@@ -429,11 +441,10 @@ export default function CategoryManager({ categories }: CategoryManagerProps) {
                 </button>
               </div>
 
-              {/* Body */}
               <div className="overflow-y-auto flex-1 p-5 space-y-6 custom-scrollbar">
                 {searchTerm ? (
                   searchResults.length > 0 ? (
-                    <div>
+                    <div className="text-left">
                       <p className="text-[9px] font-black uppercase tracking-widest text-[var(--fg-subtle)] mb-3">
                         {searchResults.length} risultati per "{searchTerm}"
                       </p>
@@ -448,7 +459,7 @@ export default function CategoryManager({ categories }: CategoryManagerProps) {
                   )
                 ) : (
                   EMOJI_GROUPS.map(group => (
-                    <div key={group.label}>
+                    <div key={group.label} className="text-left">
                       <p className="text-[9px] font-black uppercase tracking-widest text-[var(--fg-subtle)] mb-2 px-1">{group.label}</p>
                       <div className="grid grid-cols-8 gap-1.5">
                         {group.emojis.map(e => (

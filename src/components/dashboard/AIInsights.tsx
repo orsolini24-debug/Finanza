@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Sparkles, RefreshCw, X, ArrowRight, ShieldCheck, Brain, TrendingUp, Zap, ChevronRight, Info } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import LottieAnimation from '@/components/ui/LottieAnimation'
 
 interface AIInsight {
   type: 'positive' | 'warning' | 'tip' | 'info'
@@ -128,9 +129,9 @@ export default function AIInsights({ workspaceId, month }: { workspaceId: string
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="h-72 skeleton rounded-[3rem]" />
-          <div className="lg:col-span-2 h-72 skeleton rounded-[3rem]" />
+        <div className="flex flex-col items-center justify-center py-10 gap-3">
+          <LottieAnimation animation="aiBrain" className="w-28 h-28" />
+          <p className="text-sm font-bold text-[var(--fg-muted)] uppercase tracking-widest">Analisi in corso...</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[0,1,2,3].map(i => <div key={i} className="h-44 skeleton rounded-[2.5rem]" style={{ animationDelay: `${i * 150}ms` }} />)}

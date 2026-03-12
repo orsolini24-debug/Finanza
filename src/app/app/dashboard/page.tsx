@@ -11,11 +11,18 @@ import { processOverdueRecurring } from "@/lib/process-recurring";
 import { getBudgetsWithSpending } from "@/app/actions/budgets";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Tooltip } from "@/components/ui/Tooltip";
-import AIInsights from "@/components/dashboard/AIInsights";
-import { ChartCarousel } from "@/components/dashboard/ChartClient";
 import { createDefaultWorkspace } from "@/lib/workspace";
 import { SafeToSpendCard } from "@/components/dashboard/SafeToSpendCard";
 import { Amount } from "@/components/ui/Amount";
+import nextDynamic from 'next/dynamic';
+
+const AIInsights = nextDynamic(() => import("@/components/dashboard/AIInsights"), { 
+  loading: () => <div className="h-72 skeleton rounded-[3rem] animate-pulse bg-[var(--bg-elevated)]" />
+});
+
+const ChartCarousel = nextDynamic(() => import("@/components/dashboard/ChartClient").then(mod => mod.ChartCarousel), {
+  loading: () => <div className="h-[400px] skeleton rounded-[3rem] animate-pulse bg-[var(--bg-elevated)]" />
+});
 
 export default async function Dashboard({
   searchParams

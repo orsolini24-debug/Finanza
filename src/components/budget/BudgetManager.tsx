@@ -7,6 +7,10 @@ import { upsertBudget, deleteBudget, copyBudgetFromPreviousMonth } from '@/app/a
 import { useRouter } from 'next/navigation'
 import { cn, formatCurrency } from '@/lib/utils'
 import QuickCategoryModal from '@/components/categories/QuickCategoryModal'
+import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { useConfirm } from '@/hooks/useConfirm'
+import LottieAnimation from '@/components/ui/LottieAnimation'
 
 interface BudgetData {
   id: string
@@ -26,6 +30,7 @@ interface BudgetManagerProps {
 export default function BudgetManager({ budgetData, categories, month }: BudgetManagerProps) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
+  const { confirm, open, handleConfirm, handleCancel, message } = useConfirm()
   
   // Form state
   const [showModal, setShowModal] = useState(false)
@@ -69,10 +74,11 @@ export default function BudgetManager({ budgetData, categories, month }: BudgetM
     setShowModal(true)
   }
 
-  const handleDelete = (id: string) => {
-    if (!confirm('Eliminare questo budget?')) return
+  const handleDelete = async (id: string) => {
+    if (!await confirm('Eliminare questo budget?')) return
     startTransition(async () => {
       await deleteBudget(id)
+      toast.success('Budget eliminato')
       router.refresh()
     })
   }
@@ -90,19 +96,25 @@ export default function BudgetManager({ budgetData, categories, month }: BudgetM
       try {
         const result = await copyBudgetFromPreviousMonth(workspaceId, month)
         if (result.copied > 0) {
-          alert(`${result.copied} budget copiati dal mese precedente.`)
+          toast.success(`${result.copied} budget copiati dal mese precedente.`)
           router.refresh()
         } else {
-          alert('Nessun budget trovato nel mese precedente.')
+          toast.info('Nessun budget trovato nel mese precedente.')
         }
       } catch (e: any) {
-        alert(e.message)
+        toast.error(e.message)
       }
     })
   }
 
   return (
     <div className="space-y-10">
+      <ConfirmDialog 
+        open={open} 
+        message={message} 
+        onConfirm={handleConfirm} 
+        onCancel={handleCancel} 
+      />
       {/* Quick Category Modal */}
       {showQuickCat && (
         <QuickCategoryModal
@@ -241,7 +253,8 @@ export default function BudgetManager({ budgetData, categories, month }: BudgetM
           ))}
 
           {budgetData.length === 0 && !showModal && (
-            <div className="glass p-12 rounded-[2rem] border border-dashed border-[var(--border-default)] text-center">
+            <div className="glass p-8 rounded-[2rem] border border-dashed border-[var(--border-default)] text-center flex flex-col items-center">
+              <LottieAnimation animation="piggyBank" className="w-36 h-36" />
               <p className="text-[var(--fg-muted)] font-medium mb-6">Nessun budget configurato per questo mese.</p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 {availableCategories.length > 0 && (

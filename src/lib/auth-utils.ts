@@ -28,3 +28,19 @@ export async function getWorkspaceForUser() {
 
   return { workspace, userId };
 }
+
+/**
+ * Ensures the current user has access to a specific workspace.
+ */
+export async function requireWorkspaceAccess(workspaceId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) throw new Error("Non autorizzato");
+
+  const userId = (session.user as any).id;
+  const membership = await prisma.workspaceMember.findFirst({
+    where: { workspaceId, userId }
+  });
+
+  if (!membership) throw new Error("Accesso negato allo spazio di lavoro");
+  return userId;
+}

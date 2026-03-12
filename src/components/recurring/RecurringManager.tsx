@@ -7,6 +7,8 @@ import { createRecurringItem, updateRecurringItem, deleteRecurringItem, executeR
 import { useRouter } from 'next/navigation'
 import { cn, filterCategoriesByType } from '@/lib/utils'
 import QuickCategoryModal from '@/components/categories/QuickCategoryModal'
+import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 function toLocalDate(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -39,6 +41,8 @@ export default function RecurringManager({ items, categories, accounts }: Recurr
   const [showQuickCat, setShowQuickCat] = useState(false)
   const [selectedCategoryId, setSelectedCategoryId] = useState('')
   const [localCategories, setLocalCategories] = useState<Category[]>([])
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
 
   // Campi controllati per calcolo automatico endDate
   const [amountVal, setAmountVal] = useState('')
@@ -115,23 +119,38 @@ export default function RecurringManager({ items, categories, accounts }: Recurr
       try {
         if (editingItem) {
           await updateRecurringItem(editingItem.id, formData)
+          toast.success('Ricorrenza aggiornata')
         } else {
           await createRecurringItem(formData)
+          toast.success('Ricorrenza creata')
         }
         setShowModal(false)
         router.refresh()
       } catch (err: any) {
-        alert(err.message)
+        toast.error(err.message)
+      }
+    })
+  }
+
+  const handleConfirmedDelete = () => {
+    setConfirmOpen(false)
+    if (!pendingDeleteId) return
+    startTransition(async () => {
+      try {
+        await deleteRecurringItem(pendingDeleteId)
+        router.refresh()
+        toast.success('Ricorrenza eliminata')
+      } catch (err: any) {
+        toast.error(err.message)
+      } finally {
+        setPendingDeleteId(null)
       }
     })
   }
 
   const handleDelete = (id: string) => {
-    if (!confirm('Eliminare questa ricorrenza?')) return
-    startTransition(async () => {
-      await deleteRecurringItem(id)
-      router.refresh()
-    })
+    setPendingDeleteId(id)
+    setConfirmOpen(true)
   }
 
   const handleExecute = (id: string) => {
@@ -140,8 +159,9 @@ export default function RecurringManager({ items, categories, accounts }: Recurr
       try {
         await executeRecurring(id)
         router.refresh()
+        toast.success('Transazione registrata')
       } catch (err: any) {
-        alert(err.message)
+        toast.error(err.message)
       } finally {
         setExecutingId(null)
       }
@@ -495,6 +515,13 @@ export default function RecurringManager({ items, categories, accounts }: Recurr
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        message="Eliminare questa ricorrenza?"
+        onConfirm={handleConfirmedDelete}
+        onCancel={() => { setConfirmOpen(false); setPendingDeleteId(null); }}
+      />
     </div>
   )
 }

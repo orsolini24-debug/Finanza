@@ -6,6 +6,9 @@ import { Plus, Edit2, Trash2, X, Check, Loader2, Wallet, CreditCard, PiggyBank, 
 import { createAccount, updateAccount, deleteAccount } from '@/app/actions/accounts'
 import { useRouter } from 'next/navigation'
 import { cn, formatCurrency } from '@/lib/utils'
+import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { useConfirm } from '@/hooks/useConfirm'
 
 interface AccountWithBalance extends Account {
   balance: number;
@@ -49,10 +52,10 @@ const TYPE_ICONS: Record<AccountType, any> = {
 export default function AccountsManager({ accounts, openModalByDefault = false }: AccountsManagerProps) {
   const [showModal, setShowModal] = useState(openModalByDefault)
   const [editingAccount, setEditingAccount] = useState<AccountWithBalance | null>(null)
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const { confirm, open, handleConfirm, handleCancel, message } = useConfirm()
 
   const closePortal = () => {
     setShowModal(false);
@@ -84,10 +87,9 @@ export default function AccountsManager({ accounts, openModalByDefault = false }
     setError(null)
     const formData = new FormData(e.currentTarget)
 
-    // Problem #39 - trim name
     const name = (formData.get('name') as string)?.trim();
     if (!name) {
-      setError("Nome obbligatorio");
+      toast.error("Nome obbligatorio");
       return;
     }
     formData.set('name', name);
@@ -96,32 +98,42 @@ export default function AccountsManager({ accounts, openModalByDefault = false }
       try {
         if (editingAccount) {
           await updateAccount(editingAccount.id, formData)
+          toast.success("Conto aggiornato")
         } else {
           await createAccount(formData)
+          toast.success("Conto creato")
         }
         closePortal()
         router.refresh()
       } catch (err: any) {
-        setError(err.message)
+        toast.error(err.message || "Errore durante il salvataggio")
       }
     })
   }
 
-  const handleDelete = (id: string) => {
-    startTransition(async () => {
-      try {
-        await deleteAccount(id)
-        setConfirmDelete(null)
-        router.refresh()
-      } catch (err: any) {
-        alert(err.message)
-        setConfirmDelete(null)
-      }
-    })
+  const handleDelete = async (id: string, name: string) => {
+    if (await confirm(`Eliminare il conto "${name}"? Verranno eliminate anche tutte le transazioni associate.`)) {
+      startTransition(async () => {
+        try {
+          await deleteAccount(id)
+          toast.success("Conto eliminato")
+          router.refresh()
+        } catch (err: any) {
+          toast.error(err.message || "Errore durante l'eliminazione")
+        }
+      })
+    }
   }
 
   return (
     <div className="space-y-8">
+      <ConfirmDialog 
+        open={open} 
+        message={message} 
+        onConfirm={handleConfirm} 
+        onCancel={handleCancel} 
+      />
+
       <div className="flex justify-between items-center px-2">
         <h2 className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-[0.2em]">Elenco Conti Disponibili</h2>
         <button
@@ -139,30 +151,16 @@ export default function AccountsManager({ accounts, openModalByDefault = false }
           return (
             <div key={acc.id} className="glass p-8 rounded-[2.5rem] group border border-[var(--border-subtle)] hover:border-[var(--border-default)] transition-all duration-500 relative overflow-hidden">
               <div className="flex items-start justify-between mb-6">
-                <div className={cn("p-4 rounded-2xl", TYPE_COLORS[acc.type])}>
+                <div className={cn("p-4 rounded-2xl transition-all duration-500", TYPE_COLORS[acc.type])}>
                   <Icon size={24} />
                 </div>
-                <div className="flex gap-2">
-                  {confirmDelete === acc.id ? (
-                    <div className="flex items-center gap-2 bg-[var(--bg-elevated)] p-1 rounded-xl border border-[var(--expense)]/30 animate-in fade-in zoom-in-95">
-                      <span className="text-[10px] font-bold text-[var(--expense)] px-2 uppercase">Sicuro?</span>
-                      <button onClick={() => handleDelete(acc.id)} disabled={isPending} className="p-1.5 bg-[var(--expense)] text-white rounded-lg hover:opacity-80 transition-opacity">
-                        <Check size={14} />
-                      </button>
-                      <button onClick={() => setConfirmDelete(null)} className="p-1.5 bg-[var(--bg-surface)] text-[var(--fg-muted)] rounded-lg hover:text-[var(--fg-primary)] transition-colors">
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <button onClick={() => openEdit(acc)} className="p-2.5 bg-[var(--bg-elevated)] text-[var(--fg-muted)] hover:text-[var(--accent)] rounded-xl border border-[var(--border-subtle)] transition-colors">
-                        <Edit2 size={16} />
-                      </button>
-                      <button onClick={() => setConfirmDelete(acc.id)} className="p-2.5 bg-[var(--bg-elevated)] text-[var(--fg-muted)] hover:text-[var(--expense)] rounded-xl border border-[var(--border-subtle)] transition-colors">
-                        <Trash2 size={16} />
-                      </button>
-                    </>
-                  )}
+                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => openEdit(acc)} className="p-2.5 bg-[var(--bg-elevated)] text-[var(--fg-muted)] hover:text-[var(--accent)] rounded-xl border border-[var(--border-subtle)] transition-colors">
+                    <Edit2 size={16} />
+                  </button>
+                  <button onClick={() => handleDelete(acc.id, acc.name)} disabled={isPending} className="p-2.5 bg-[var(--bg-elevated)] text-[var(--fg-muted)] hover:text-[var(--expense)] rounded-xl border border-[var(--border-subtle)] transition-colors">
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
 
@@ -255,13 +253,6 @@ export default function AccountsManager({ accounts, openModalByDefault = false }
                   />
                 </div>
               </div>
-
-              {error && (
-                <div className="p-4 bg-[var(--expense-dim)] border border-[var(--expense)]/20 rounded-2xl flex items-center gap-3">
-                   <X size={18} className="text-[var(--expense)]" />
-                   <p className="text-xs text-[var(--expense)] font-bold uppercase">{error}</p>
-                </div>
-              )}
 
               <div className="flex gap-4 pt-4">
                 <button type="button" onClick={closePortal} className="flex-1 px-6 py-4 text-[var(--fg-muted)] font-bold text-sm bg-[var(--bg-elevated)] hover:bg-[var(--bg-elevated)]/80 rounded-2xl transition-all border border-[var(--border-subtle)]">Annulla</button>

@@ -27,7 +27,7 @@ export default function RegisterTransferModal({ accounts, onClose }: RegisterTra
     e.preventDefault()
     
     if (fromAccountId === toAccountId) {
-      alert("I due conti devono essere diversi.")
+      toast.error("I due conti devono essere diversi.")
       return
     }
 
@@ -40,10 +40,11 @@ export default function RegisterTransferModal({ accounts, onClose }: RegisterTra
           date,
           description: description || undefined
         })
+        toast.success("Trasferimento registrato")
         onClose()
         router.refresh()
       } catch (err: any) {
-        alert(err.message || 'Errore durante la creazione del trasferimento')
+        toast.error(err.message || 'Errore durante la creazione del trasferimento')
       }
     })
   }

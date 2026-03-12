@@ -40,10 +40,11 @@ export default function QuickAddTransaction({ workspaceId, accounts, categories,
     startTransition(async () => {
       try {
         await createTransaction(formData)
+        toast.success("Operazione registrata")
         setOpen(false)
         router.refresh()
-      } catch (err) {
-        alert('Errore durante la creazione')
+      } catch (err: any) {
+        toast.error(err.message || 'Errore durante la creazione')
       }
     })
   }

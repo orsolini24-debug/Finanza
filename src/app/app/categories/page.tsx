@@ -2,7 +2,11 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
-import CategoryManager from "@/components/categories/CategoryManager";
+import dynamic from 'next/dynamic';
+
+const CategoryManager = dynamic(() => import("@/components/categories/CategoryManager"), {
+  loading: () => <div className="h-96 skeleton rounded-[3rem] animate-pulse bg-[var(--bg-elevated)]" />
+});
 
 export default async function CategoriesPage() {
   const session = await getServerSession(authOptions);

@@ -11,6 +11,9 @@ import { cn, formatCurrency } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 import TransactionEditModal from './transactions/TransactionEditModal'
 import QuickCategoryModal from './categories/QuickCategoryModal'
+import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import LottieAnimation from '@/components/ui/LottieAnimation'
 
 type TransactionWithRelations = Transaction & {
   category: Category | null;
@@ -28,6 +31,7 @@ export default function TransactionsTable({ transactions, categories, accounts, 
   const [selectedTx, setSelectedTx] = useState<string[]>([])
   const [editingTx, setEditingTx] = useState<TransactionWithRelations | null>(null)
   const [showQuickCategoryModal, setShowQuickCategoryModal] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [aiSuggestions, setAiSuggestions] = useState<{ transactionId: string; categoryId: string | null; categoryName: string | null; confidence: number; accepted: boolean }[]>([])
@@ -91,25 +95,31 @@ export default function TransactionsTable({ transactions, categories, accounts, 
         await confirmTransactions(selectedTx)
         setSelectedTx([])
         router.refresh()
+        toast.success("Transazioni confermate")
       } catch (e: any) {
-        alert(e.message)
+        toast.error(e.message)
+      }
+    })
+  }
+
+  const handleConfirmedDelete = () => {
+    setConfirmOpen(false)
+    if (isPending) return
+    startTransition(async () => {
+      try {
+        await deleteTransactions(selectedTx)
+        setSelectedTx([])
+        router.refresh()
+        toast.success("Transazioni eliminate")
+      } catch (e: any) {
+        toast.error(e.message)
       }
     })
   }
 
   const handleDelete = () => {
     if (isPending) return
-    if (confirm(`Eliminare ${selectedTx.length} transazioni?`)) {
-      startTransition(async () => {
-        try {
-          await deleteTransactions(selectedTx)
-          setSelectedTx([])
-          router.refresh()
-        } catch (e: any) {
-          alert(e.message)
-        }
-      })
-    }
+    setConfirmOpen(true)
   }
 
   const handleUnlinkTransfer = (txId: string) => {
@@ -118,8 +128,9 @@ export default function TransactionsTable({ transactions, categories, accounts, 
       try {
         await unlinkTransfer(txId)
         router.refresh()
+        toast.success("Trasferimento scollegato")
       } catch (e: any) {
-        alert(e.message)
+        toast.error(e.message)
       }
     })
   }
@@ -130,8 +141,9 @@ export default function TransactionsTable({ transactions, categories, accounts, 
       try {
         await confirmTransferPair(txId)
         router.refresh()
+        toast.success("Trasferimento confermato")
       } catch (e: any) {
-        alert(e.message)
+        toast.error(e.message)
       }
     })
   }
@@ -152,8 +164,9 @@ export default function TransactionsTable({ transactions, categories, accounts, 
         await setTransactionCategory(selectedTx, categoryId)
         // Keep selectedTx to allow immediate confirmation
         router.refresh()
+        toast.success("Categoria aggiornata")
       } catch (e: any) {
-        alert(e.message)
+        toast.error(e.message)
       }
     })
   }
@@ -161,8 +174,8 @@ export default function TransactionsTable({ transactions, categories, accounts, 
   const handleAiCategorize = async () => {
     if (isAiLoading || isPending) return
     const idsToProcess = selectedTx.length > 0 ? selectedTx : filtered.filter(t => t.status === 'STAGED').map(t => t.id)
-    if (idsToProcess.length === 0) return alert("Nessuna transazione in attesa.")
-    if (idsToProcess.length > 50) return alert("Seleziona massimo 50 transazioni alla volta.")
+    if (idsToProcess.length === 0) return toast.error("Nessuna transazione in attesa.")
+    if (idsToProcess.length > 50) return toast.error("Seleziona massimo 50 transazioni alla volta.")
 
     setIsAiLoading(true)
     try {
@@ -170,7 +183,7 @@ export default function TransactionsTable({ transactions, categories, accounts, 
       setAiSuggestions(suggestions.map(s => ({ ...s, accepted: s.confidence >= 0.7 })))
       setShowAiPanel(true)
     } catch (e: any) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setIsAiLoading(false)
     }
@@ -195,8 +208,9 @@ export default function TransactionsTable({ transactions, categories, accounts, 
         setAiSuggestions([])
         // Keep selection if they were selected before
         router.refresh()
+        toast.success("Categorie AI applicate")
       } catch (e: any) {
-        alert(e.message)
+        toast.error(e.message)
       }
     })
   }
@@ -366,6 +380,19 @@ export default function TransactionsTable({ transactions, categories, accounts, 
         )}
       </AnimatePresence>
 
+      {/* Empty State */}
+      {groupedTransactions.length === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center justify-center py-16 gap-2 text-center"
+        >
+          <LottieAnimation animation="empty" className="w-48 h-48" />
+          <p className="text-sm font-bold text-[var(--fg-muted)] uppercase tracking-widest mt-2">Nessuna transazione trovata</p>
+          <p className="text-xs text-[var(--fg-subtle)]">Prova a cambiare i filtri o aggiungi una nuova transazione</p>
+        </motion.div>
+      )}
+
       {/* Grouped List */}
       <div className="space-y-8">
         {groupedTransactions.map(([date, { txs, net }]) => (
@@ -464,6 +491,13 @@ export default function TransactionsTable({ transactions, categories, accounts, 
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog 
+        open={confirmOpen} 
+        message={`Eliminare ${selectedTx.length} transazion${selectedTx.length === 1 ? 'e' : 'i'}?`} 
+        onConfirm={handleConfirmedDelete} 
+        onCancel={() => setConfirmOpen(false)} 
+      />
     </div>
   )
 }

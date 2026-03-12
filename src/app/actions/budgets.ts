@@ -3,9 +3,10 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getPeriodRange } from "@/lib/period";
-import { getWorkspaceForUser } from "@/lib/auth-utils";
+import { getWorkspaceForUser, requireWorkspaceAccess } from "@/lib/auth-utils";
 
 export async function getBudgetsWithSpending(workspaceId: string, month: string) {
+  await requireWorkspaceAccess(workspaceId);
   const { start, end } = getPeriodRange(month);
 
   const budgets = await prisma.budget.findMany({

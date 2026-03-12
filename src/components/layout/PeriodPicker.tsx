@@ -1,23 +1,42 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Calendar, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CalendarDays, Check, ChevronDown } from 'lucide-react'
 import { formatMonthLabel, getCurrentMonth } from '@/lib/period'
 import { cn } from '@/lib/utils'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function PeriodPicker() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [isPending, startTransition] = useTransition()
+  
   const [showDays, setShowDays] = useState(false)
+  const [showMonths, setShowMonths] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   
   const currentMonth = searchParams.get('month') || getCurrentMonth()
-  const currentDay = searchParams.get('day') // Nuovo parametro per il giorno
+  const currentDay = searchParams.get('day')
   const todayMonth = getCurrentMonth()
   const todayDate = new Date()
+
+  // Genera una lista di mesi per il selettore rapido (ultimo anno + prossimo)
+  const monthOptions = useMemo(() => {
+    const options = []
+    const d = new Date()
+    d.setMonth(d.getMonth() + 3) // Partiamo da 3 mesi nel futuro
+    for (let i = 0; i < 18; i++) {
+      const mStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      options.push({
+        value: mStr,
+        label: formatMonthLabel(mStr)
+      })
+      d.setMonth(d.getMonth() - 1)
+    }
+    return options
+  }, [])
 
   const updateParam = (key: string, value: string | null) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -25,23 +44,35 @@ export default function PeriodPicker() {
     else params.delete(key)
     
     const query = params.toString()
-    router.push(`${pathname}${query ? `?${query}` : ''}`)
+    const newUrl = `${pathname}${query ? `?${query}` : ''}`
+    
+    startTransition(() => {
+      router.push(newUrl)
+    })
   }
 
   const handlePrev = () => {
-    const [year, month] = currentMonth.split('-').map(Number)
-    const prevDate = new Date(year, month - 2, 1)
-    const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`
-    updateParam('month', prevMonth)
-    updateParam('day', null)
+    try {
+      const [year, month] = currentMonth.split('-').map(Number)
+      const prevDate = new Date(year, month - 2, 1)
+      const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`
+      updateParam('month', prevMonth)
+      if (currentDay) updateParam('day', null)
+    } catch (e) {
+      updateParam('month', todayMonth)
+    }
   }
 
   const handleNext = () => {
-    const [year, month] = currentMonth.split('-').map(Number)
-    const nextDate = new Date(year, month, 1)
-    const nextMonth = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`
-    updateParam('month', nextMonth)
-    updateParam('day', null)
+    try {
+      const [year, month] = currentMonth.split('-').map(Number)
+      const nextDate = new Date(year, month, 1)
+      const nextMonth = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`
+      updateParam('month', nextMonth)
+      if (currentDay) updateParam('day', null)
+    } catch (e) {
+      updateParam('month', todayMonth)
+    }
   }
 
   // Genera i giorni del mese corrente
@@ -59,17 +90,23 @@ export default function PeriodPicker() {
   return (
     <div className="relative flex flex-col items-end gap-2">
       <div className="flex items-center gap-2">
+        {/* Toggle Giorno */}
         <button
-          onClick={() => setShowDays(!showDays)}
+          onClick={() => { setShowDays(!showDays); setShowMonths(false); }}
           className={cn(
-            "p-2.5 rounded-xl border transition-all active:scale-95",
+            "p-2.5 rounded-xl border transition-all active:scale-95 shadow-sm",
             showDays ? "bg-[var(--accent)] text-[var(--accent-on)] border-[var(--accent)]" : "bg-[var(--bg-elevated)] text-[var(--fg-muted)] border-[var(--border-default)]"
           )}
+          title="Seleziona Giorno"
         >
           <CalendarDays size={18} />
         </button>
 
-        <div className="flex items-center bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-2xl p-1 shadow-sm h-11">
+        {/* Selettore Mese */}
+        <div className={cn(
+          "flex items-center bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-2xl p-1 shadow-sm h-11 transition-opacity",
+          isPending ? "opacity-50" : "opacity-100"
+        )}>
           <button
             onClick={handlePrev}
             className="p-1.5 hover:bg-[var(--bg-surface)] rounded-xl transition-colors text-[var(--fg-muted)] hover:text-[var(--fg-primary)]"
@@ -78,12 +115,14 @@ export default function PeriodPicker() {
           </button>
           
           <button 
-            onClick={() => { updateParam('month', todayMonth); updateParam('day', null); }}
-            className="px-4 flex items-center gap-2 min-w-[120px] justify-center hover:text-[var(--accent)] transition-colors"
+            onClick={() => { setShowMonths(!showMonths); setShowDays(false); }}
+            className={cn(
+              "px-4 flex items-center gap-2 min-w-[120px] justify-center transition-colors font-black uppercase tracking-tight text-[13px]",
+              showMonths ? "text-[var(--accent)]" : "text-[var(--fg-primary)] hover:text-[var(--accent)]"
+            )}
           >
-            <span className="text-[13px] font-black uppercase tracking-tight">
-              {formatMonthLabel(currentMonth)}
-            </span>
+            {formatMonthLabel(currentMonth)}
+            <ChevronDown size={12} className={cn("transition-transform", showMonths ? "rotate-180" : "")} />
           </button>
 
           <button
@@ -96,6 +135,41 @@ export default function PeriodPicker() {
       </div>
 
       <AnimatePresence>
+        {/* Dropdown MESI */}
+        {showMonths && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            className="absolute top-14 right-0 z-50 glass bg-[var(--bg-surface)] p-2 rounded-[2rem] border border-[var(--border-default)] shadow-2xl w-64 max-h-[400px] overflow-y-auto custom-scrollbar"
+          >
+            <div className="p-2 space-y-1">
+              <button
+                onClick={() => { updateParam('month', todayMonth); updateParam('day', null); setShowMonths(false); }}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-[var(--accent-dim)] text-[var(--accent)] font-black text-[11px] uppercase tracking-widest transition-all mb-2 border border-dashed border-[var(--accent)]/30"
+              >
+                Torna a Oggi
+              </button>
+              {monthOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => { updateParam('month', opt.value); updateParam('day', null); setShowMonths(false); }}
+                  className={cn(
+                    "w-full flex items-center justify-between px-4 py-2.5 rounded-xl transition-all text-xs font-bold",
+                    currentMonth === opt.value 
+                      ? "bg-[var(--accent)] text-[var(--accent-on)] shadow-md" 
+                      : "text-[var(--fg-primary)] hover:bg-[var(--bg-elevated)]"
+                  )}
+                >
+                  <span>{opt.label}</span>
+                  {currentMonth === opt.value && <Check size={14} strokeWidth={3} />}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Timeline GIORNI */}
         {showDays && (
           <motion.div
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -105,7 +179,7 @@ export default function PeriodPicker() {
           >
             <div className="flex items-center justify-between mb-4 px-2">
                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--fg-subtle)]">Seleziona Giorno</span>
-               <button onClick={() => updateParam('day', null)} className="text-[9px] font-bold text-[var(--accent)] hover:underline">Reset</button>
+               <button onClick={() => { updateParam('day', null); setShowDays(false); }} className="text-[9px] font-bold text-[var(--accent)] hover:underline uppercase tracking-widest">Reset Giorno</button>
             </div>
             
             <div 
@@ -119,7 +193,7 @@ export default function PeriodPicker() {
                   <button
                     key={d}
                     id={`day-${d}`}
-                    onClick={() => updateParam('day', isSelected ? null : String(d))}
+                    onClick={() => { updateParam('day', isSelected ? null : String(d)); setShowDays(false); }}
                     className={cn(
                       "flex-shrink-0 w-12 h-16 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all snap-center border-2",
                       isSelected 

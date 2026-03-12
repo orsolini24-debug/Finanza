@@ -1,10 +1,12 @@
+export const dynamic = 'force-dynamic';
+
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { TrendingUp, TrendingDown, Wallet, CalendarClock, PiggyBank, ClipboardCheck, HelpCircle } from "lucide-react";
 import { formatCurrency, cn } from "@/lib/utils";
-import { getCurrentMonth, getPeriodRange } from "@/lib/period";
+import { getCurrentMonth, getPeriodRange, getDayRange } from "@/lib/period";
 import { processOverdueRecurring } from "@/lib/process-recurring";
 import { getBudgetsWithSpending } from "@/app/actions/budgets";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
@@ -25,7 +27,9 @@ export default async function Dashboard({
 
   const resolvedSearchParams = await searchParams;
   const month = (resolvedSearchParams.month as string) || getCurrentMonth();
-  const { start, end } = getPeriodRange(month);
+  const day = resolvedSearchParams.day as string;
+  
+  const { start, end } = day ? getDayRange(month, day) : getPeriodRange(month);
 
   const userId = (session.user as any).id;
 

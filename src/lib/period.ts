@@ -10,6 +10,14 @@ export function getPeriodRange(month: string): { start: Date, end: Date } {
   return { start, end };
 }
 
+export function getDayRange(month: string, day: string): { start: Date, end: Date } {
+  const [year, m] = month.split('-').map(Number);
+  const d = Number(day);
+  const start = new Date(Date.UTC(year, m - 1, d, 0, 0, 0));
+  const end = new Date(Date.UTC(year, m - 1, d, 23, 59, 59));
+  return { start, end };
+}
+
 export function formatMonthLabel(month: string): string {
   const [year, m] = month.split('-').map(Number);
   const date = new Date(year, m - 1, 1);

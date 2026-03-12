@@ -2,9 +2,10 @@
 
 import { useState, useTransition, useMemo, useEffect } from 'react'
 import { Transaction, Category, Account } from '@prisma/client'
-import { Search, Filter, Check, X, Trash2, Tags, ChevronDown, CheckCircle2, AlertCircle, Edit2, Loader2, Download, Sparkles, Clock } from 'lucide-react'
+import { Search, Filter, Check, X, Trash2, Tags, ChevronDown, CheckCircle2, AlertCircle, Edit2, Loader2, Download, Sparkles, Clock, ArrowRightLeft } from 'lucide-react'
 import { confirmTransactions, deleteTransactions, setTransactionCategory } from '@/app/actions/transactions'
 import { aiSuggestCategories } from '@/app/actions/ai-categorize'
+import { unlinkTransfer, confirmTransferPair } from '@/app/actions/transfers'
 import { useRouter } from 'next/navigation'
 import { cn, formatCurrency } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -113,6 +114,30 @@ export default function TransactionsTable({ transactions, categories, accounts, 
         }
       })
     }
+  }
+
+  const handleUnlinkTransfer = (txId: string) => {
+    if (isPending) return
+    startTransition(async () => {
+      try {
+        await unlinkTransfer(txId)
+        router.refresh()
+      } catch (e: any) {
+        alert(e.message)
+      }
+    })
+  }
+
+  const handleConfirmTransferPair = (txId: string) => {
+    if (isPending) return
+    startTransition(async () => {
+      try {
+        await confirmTransferPair(txId)
+        router.refresh()
+      } catch (e: any) {
+        alert(e.message)
+      }
+    })
   }
 
   const handleChangeCategory = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -505,9 +530,15 @@ export default function TransactionsTable({ transactions, categories, accounts, 
                           </button>
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-wider">
-                            {tx.category?.name || 'Senza categoria'}
-                          </span>
+                          {tx.isTransfer ? (
+                            <span className="flex items-center gap-1 text-[9px] font-black text-blue-400 uppercase bg-blue-500/10 px-1.5 py-0.5 rounded-md border border-blue-500/10">
+                              <ArrowRightLeft size={8} /> Trasferimento
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-wider">
+                              {tx.category?.name || 'Senza categoria'}
+                            </span>
+                          )}
                           <span className="w-1 h-1 rounded-full bg-[var(--border-strong)]" />
                           <span className="text-[10px] font-medium text-[var(--fg-subtle)] uppercase tracking-tighter">
                             {tx.account.name}
@@ -521,6 +552,26 @@ export default function TransactionsTable({ transactions, categories, accounts, 
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
+                      {tx.isTransfer && tx.status === 'STAGED' && (
+                        <button
+                          onClick={() => handleConfirmTransferPair(tx.id)}
+                          disabled={isPending}
+                          className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white rounded-lg transition-all"
+                          title="Conferma entrambe le leg del trasferimento"
+                        >
+                          <CheckCircle2 size={14} />
+                        </button>
+                      )}
+                      {tx.isTransfer && (
+                        <button
+                          onClick={() => handleUnlinkTransfer(tx.id)}
+                          disabled={isPending}
+                          className="p-1.5 bg-[var(--bg-elevated)] text-[var(--fg-subtle)] hover:text-[var(--expense)] rounded-lg transition-all"
+                          title="Scollega trasferimento"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
                       <span className={cn(
                         "font-mono font-bold text-base tracking-tighter",
                         Number(tx.amount) < 0 ? "text-[var(--expense)]" : "text-[var(--income)]"

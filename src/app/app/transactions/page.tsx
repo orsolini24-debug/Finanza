@@ -5,7 +5,9 @@ import prisma from "@/lib/prisma";
 import TransactionsTable from "@/components/TransactionsTable";
 import { getCurrentMonth, getPeriodRange } from "@/lib/period";
 import { getSuggestedRules } from "@/app/actions/transactions";
+import { detectTransferCandidates } from "@/app/actions/transfers";
 import RuleSuggestions from "@/components/transactions/RuleSuggestions";
+import TransferSuggestions from "@/components/transactions/TransferSuggestions";
 
 export default async function TransactionsPage({
   searchParams
@@ -38,6 +40,7 @@ export default async function TransactionsPage({
   if (!workspace) return <div className="p-8">Nessun workspace trovato. Contatta l'assistenza.</div>;
 
   const suggestions = await getSuggestedRules(workspace.id);
+  const transferCandidates = await detectTransferCandidates();
 
   // Serialize Decimal fields before passing to Client Components
   const transactions = workspace.transactions.map(t => ({
@@ -67,6 +70,7 @@ export default async function TransactionsPage({
       </div>
 
       <RuleSuggestions suggestions={suggestions} />
+      <TransferSuggestions candidates={transferCandidates} />
 
       <TransactionsTable
         transactions={transactions as any}

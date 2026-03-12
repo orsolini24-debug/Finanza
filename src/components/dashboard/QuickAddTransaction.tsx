@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Plus, X, Loader2, Check, Calendar } from 'lucide-react'
+import { Plus, X, Loader2, Check, Calendar, ArrowRightLeft } from 'lucide-react'
 import { createTransaction } from '@/app/actions/transactions'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Account, Category } from '@prisma/client'
+import RegisterTransferModal from './RegisterTransferModal'
 
 interface QuickAddTransactionProps {
   workspaceId: string
@@ -17,6 +18,7 @@ interface QuickAddTransactionProps {
 
 export default function QuickAddTransaction({ workspaceId, accounts, categories, currentMonth }: QuickAddTransactionProps) {
   const [open, setOpen] = useState(false)
+  const [showTransferModal, setShowTransferModal] = useState(false)
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
   
@@ -103,6 +105,15 @@ export default function QuickAddTransaction({ workspaceId, accounts, categories,
                     )}
                   >
                     Entrata
+                  </button>
+                  <button
+                    onClick={() => { setOpen(false); setShowTransferModal(true); }}
+                    className="flex-1 py-3 text-xs font-black uppercase rounded-xl transition-all text-[var(--fg-muted)] hover:text-blue-400 hover:bg-blue-500/5"
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <ArrowRightLeft size={12} />
+                      <span>Trasf.</span>
+                    </div>
                   </button>
                 </div>
 
@@ -197,6 +208,15 @@ export default function QuickAddTransaction({ workspaceId, accounts, categories,
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showTransferModal && (
+          <RegisterTransferModal 
+            accounts={accounts} 
+            onClose={() => setShowTransferModal(false)} 
+          />
         )}
       </AnimatePresence>
     </>

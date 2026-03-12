@@ -6,6 +6,7 @@ import { Plus, RefreshCw, Trash2, Edit2, Check, X, Loader2, Calendar, Tag, Walle
 import { createRecurringItem, updateRecurringItem, deleteRecurringItem, executeRecurring } from '@/app/actions/recurring'
 import { useRouter } from 'next/navigation'
 import { cn, filterCategoriesByType } from '@/lib/utils'
+import QuickCategoryModal from '@/components/categories/QuickCategoryModal'
 
 function toLocalDate(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -35,6 +36,9 @@ export default function RecurringManager({ items, categories, accounts }: Recurr
   const [editingItem, setEditingItem] = useState<RecurringWithRelations | null>(null)
   const [isIncome, setIsIncome] = useState(false)
   const [executingId, setExecutingId] = useState<string | null>(null)
+  const [showQuickCat, setShowQuickCat] = useState(false)
+  const [selectedCategoryId, setSelectedCategoryId] = useState('')
+  const [localCategories, setLocalCategories] = useState<Category[]>([])
 
   // Campi controllati per calcolo automatico endDate
   const [amountVal, setAmountVal] = useState('')
@@ -43,7 +47,12 @@ export default function RecurringManager({ items, categories, accounts }: Recurr
   const [nextDateVal, setNextDateVal] = useState(toLocalDate(new Date()))
   const [endDateVal, setEndDateVal] = useState('')
 
-  const filteredCategories = filterCategoriesByType(categories, isIncome)
+  const allCategories = useMemo(() => {
+    const merged = [...categories]
+    localCategories.forEach(lc => { if (!merged.find(c => c.id === lc.id)) merged.push(lc) })
+    return merged
+  }, [categories, localCategories])
+  const filteredCategories = filterCategoriesByType(allCategories, isIncome)
 
   // Calcolo occorrenze e data fine automatica
   const occurrences = useMemo(() => {
@@ -72,6 +81,8 @@ export default function RecurringManager({ items, categories, accounts }: Recurr
       setCadenceVal(editingItem?.cadence || 'monthly')
       setNextDateVal(editingItem ? toLocalDate(new Date(editingItem.nextDate)) : toLocalDate(new Date()))
       setEndDateVal((editingItem as any)?.endDate ? toLocalDate(new Date((editingItem as any).endDate)) : '')
+      setSelectedCategoryId(editingItem?.categoryId || '')
+      setLocalCategories([])
     }
   }, [showModal, editingItem])
 
@@ -305,11 +316,26 @@ export default function RecurringManager({ items, categories, accounts }: Recurr
         )}
       </section>
 
+      {/* Quick Category Modal */}
+      {showQuickCat && (
+        <QuickCategoryModal
+          onClose={() => setShowQuickCat(false)}
+          onSuccess={(newCatId) => {
+            // Segnaposto locale finché router.refresh() non carica la categoria reale
+            const tempCat = { id: newCatId, name: 'Nuova categoria', icon: null, type: 'BOTH', parentId: null, workspaceId: '', createdAt: new Date(), updatedAt: new Date() } as unknown as Category
+            setLocalCategories(prev => [...prev, tempCat])
+            setSelectedCategoryId(newCatId)
+            setShowQuickCat(false)
+            router.refresh()
+          }}
+        />
+      )}
+
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
-          <div className="glass bg-[var(--bg-surface)] rounded-[3rem] shadow-2xl w-full max-w-lg border border-[var(--border-default)] overflow-hidden scale-in animate-in zoom-in-95">
-            <div className="flex justify-between items-center p-8 border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)]/30">
+          <div className="glass bg-[var(--bg-surface)] rounded-[3rem] shadow-2xl w-full max-w-lg border border-[var(--border-default)] flex flex-col max-h-[90dvh] animate-in zoom-in-95">
+            <div className="flex justify-between items-center p-8 border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)]/30 flex-shrink-0">
               <h2 className="text-2xl font-display font-bold text-[var(--fg-primary)]">
                 {editingItem ? 'Modifica Ricorrenza' : 'Nuova Ricorrenza'}
               </h2>
@@ -317,8 +343,8 @@ export default function RecurringManager({ items, categories, accounts }: Recurr
                 <X size={20} />
               </button>
             </div>
-            
-            <form onSubmit={handleSubmit} className="p-8 space-y-6">
+
+            <form onSubmit={handleSubmit} className="p-8 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest ml-1">Nome *</label>
                 <input name="name" defaultValue={editingItem?.name || ''} required className="w-full px-4 py-4 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl text-[var(--fg-primary)] font-medium" placeholder="es. Netflix" />
@@ -428,10 +454,25 @@ export default function RecurringManager({ items, categories, accounts }: Recurr
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest ml-1">Categoria</label>
-                  <select name="categoryId" defaultValue={editingItem?.categoryId || ''} className="w-full px-4 py-3 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl text-[var(--fg-primary)] appearance-none">
+                  <div className="flex items-center justify-between ml-1">
+                    <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest">Categoria</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowQuickCat(true)}
+                      className="flex items-center gap-1 text-[9px] font-black uppercase text-[var(--accent)] hover:underline tracking-widest"
+                      title="Crea nuova categoria"
+                    >
+                      <Plus size={10} /> Nuova
+                    </button>
+                  </div>
+                  <select
+                    name="categoryId"
+                    value={selectedCategoryId}
+                    onChange={e => setSelectedCategoryId(e.target.value)}
+                    className="w-full px-4 py-3 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl text-[var(--fg-primary)] appearance-none"
+                  >
                     <option value="">Senza categoria</option>
-                    {filteredCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {filteredCategories.map(c => <option key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ''}{c.name}</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">

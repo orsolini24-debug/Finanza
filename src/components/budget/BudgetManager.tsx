@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useMemo } from 'react'
 import { Category } from '@prisma/client'
 import { Tag, Plus, Trash2, Edit2, Check, X, Loader2, AlertCircle, Info, Copy } from 'lucide-react'
 import { upsertBudget, deleteBudget, copyBudgetFromPreviousMonth } from '@/app/actions/budgets'
 import { useRouter } from 'next/navigation'
 import { cn, formatCurrency } from '@/lib/utils'
+import QuickCategoryModal from '@/components/categories/QuickCategoryModal'
 
 interface BudgetData {
   id: string
@@ -31,8 +32,16 @@ export default function BudgetManager({ budgetData, categories, month }: BudgetM
   const [editingId, setEditingId] = useState<string | null>(null)
   const [categoryId, setCategoryId] = useState('')
   const [amount, setAmount] = useState('')
+  const [showQuickCat, setShowQuickCat] = useState(false)
+  const [localCategories, setLocalCategories] = useState<Category[]>([])
 
-  const availableCategories = categories.filter(
+  const allCategories = useMemo(() => {
+    const merged = [...categories]
+    localCategories.forEach(lc => { if (!merged.find(c => c.id === lc.id)) merged.push(lc) })
+    return merged
+  }, [categories, localCategories])
+
+  const availableCategories = allCategories.filter(
     cat => !budgetData.some(b => b.category.id === cat.id)
   )
 
@@ -94,6 +103,20 @@ export default function BudgetManager({ budgetData, categories, month }: BudgetM
 
   return (
     <div className="space-y-10">
+      {/* Quick Category Modal */}
+      {showQuickCat && (
+        <QuickCategoryModal
+          onClose={() => setShowQuickCat(false)}
+          onSuccess={(newCatId) => {
+            const tempCat = { id: newCatId, name: 'Nuova categoria', icon: null, type: 'BOTH', parentId: null, workspaceId: '', createdAt: new Date(), updatedAt: new Date() } as unknown as Category
+            setLocalCategories(prev => [...prev, tempCat])
+            setCategoryId(newCatId)
+            setShowQuickCat(false)
+            router.refresh()
+          }}
+        />
+      )}
+
       {/* Riepilogo Aggregato */}
       {budgetData.length > 0 && (
         <div className="glass p-8 rounded-[2.5rem] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]/20">
@@ -259,7 +282,15 @@ export default function BudgetManager({ budgetData, categories, month }: BudgetM
             
             <form onSubmit={handleSubmit} className="p-8 space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest ml-1">Categoria *</label>
+                <div className="flex items-center justify-between ml-1">
+                  <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest">Categoria *</label>
+                  {!editingId && (
+                    <button type="button" onClick={() => setShowQuickCat(true)}
+                      className="flex items-center gap-1 text-[9px] font-black uppercase text-[var(--accent)] hover:underline tracking-widest">
+                      <Plus size={10} /> Nuova
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
                   <select
                     value={categoryId}

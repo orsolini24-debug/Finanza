@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { ChevronLeft, ChevronRight, CalendarDays, Check, ChevronDown } from 'lucide-react'
-import { formatMonthLabel, getCurrentMonth } from '@/lib/period'
+import { formatMonthLabel, getCurrentMonth, getQuarterLabel, getYearLabel, getPrevQuarterMonth, getNextQuarterMonth, getPrevYearMonth, getNextYearMonth, type PeriodMode } from '@/lib/period'
 import { cn } from '@/lib/utils'
 import { useState, useRef, useEffect, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -19,6 +19,7 @@ export default function PeriodPicker() {
   
   const currentMonth = searchParams.get('month') || getCurrentMonth()
   const currentDay = searchParams.get('day')
+  const currentPeriod = (searchParams.get('period') as PeriodMode) || 'month'
   const todayMonth = getCurrentMonth()
   const todayDate = new Date()
 
@@ -51,8 +52,20 @@ export default function PeriodPicker() {
     })
   }
 
+  const updatePeriod = (newPeriod: PeriodMode) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (newPeriod === 'month') params.delete('period')
+    else params.set('period', newPeriod)
+    params.delete('day')
+    const query = params.toString()
+    startTransition(() => { router.push(`${pathname}${query ? '?' + query : ''}`) })
+  }
+
   const handlePrev = () => {
     try {
+      if (currentPeriod === 'quarter') { updateParam('month', getPrevQuarterMonth(currentMonth)); if (currentDay) updateParam('day', null); return }
+      if (currentPeriod === 'year')    { updateParam('month', getPrevYearMonth(currentMonth));    if (currentDay) updateParam('day', null); return }
+
       const [year, month] = currentMonth.split('-').map(Number)
       const prevDate = new Date(year, month - 2, 1)
       const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`
@@ -65,6 +78,9 @@ export default function PeriodPicker() {
 
   const handleNext = () => {
     try {
+      if (currentPeriod === 'quarter') { updateParam('month', getNextQuarterMonth(currentMonth)); if (currentDay) updateParam('day', null); return }
+      if (currentPeriod === 'year')    { updateParam('month', getNextYearMonth(currentMonth));    if (currentDay) updateParam('day', null); return }
+
       const [year, month] = currentMonth.split('-').map(Number)
       const nextDate = new Date(year, month, 1)
       const nextMonth = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`
@@ -89,20 +105,36 @@ export default function PeriodPicker() {
 
   return (
     <div className="relative flex flex-col items-end gap-2">
-      <div className="flex items-center gap-2">
-        {/* Toggle Giorno */}
-        <button
-          onClick={() => { setShowDays(!showDays); setShowMonths(false); }}
-          className={cn(
-            "p-2.5 rounded-xl border transition-all active:scale-95 shadow-sm",
-            showDays ? "bg-[var(--accent)] text-[var(--accent-on)] border-[var(--accent)]" : "bg-[var(--bg-elevated)] text-[var(--fg-muted)] border-[var(--border-default)]"
-          )}
-          title="Seleziona Giorno"
-        >
-          <CalendarDays size={18} />
-        </button>
+      {/* Mode Selector */}
+      <div className="flex items-center gap-1 p-1 bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-xl self-end">
+        {(['month', 'quarter', 'year'] as PeriodMode[]).map(mode => (
+          <button key={mode} onClick={() => updatePeriod(mode)}
+            className={cn('px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all',
+              currentPeriod === mode
+                ? 'bg-[var(--accent)] text-[var(--accent-on)]'
+                : 'text-[var(--fg-subtle)] hover:text-[var(--fg-primary)]'
+            )}>
+            {mode === 'month' ? 'Mese' : mode === 'quarter' ? 'Trim.' : 'Anno'}
+          </button>
+        ))}
+      </div>
 
-        {/* Selettore Mese */}
+      <div className="flex items-center gap-2">
+        {/* Toggle Giorno (Solo in modalità mese) */}
+        {currentPeriod === 'month' && (
+          <button
+            onClick={() => { setShowDays(!showDays); setShowMonths(false); }}
+            className={cn(
+              "p-2.5 rounded-xl border transition-all active:scale-95 shadow-sm",
+              showDays ? "bg-[var(--accent)] text-[var(--accent-on)] border-[var(--accent)]" : "bg-[var(--bg-elevated)] text-[var(--fg-muted)] border-[var(--border-default)]"
+            )}
+            title="Seleziona Giorno"
+          >
+            <CalendarDays size={18} />
+          </button>
+        )}
+
+        {/* Selettore Periodo */}
         <div className={cn(
           "flex items-center bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-2xl p-1 shadow-sm h-11 transition-opacity",
           isPending ? "opacity-50" : "opacity-100"
@@ -115,14 +147,17 @@ export default function PeriodPicker() {
           </button>
           
           <button 
-            onClick={() => { setShowMonths(!showMonths); setShowDays(false); }}
+            onClick={() => { if (currentPeriod === 'month') { setShowMonths(!showMonths); setShowDays(false); } }}
             className={cn(
               "px-4 flex items-center gap-2 min-w-[120px] justify-center transition-colors font-black uppercase tracking-tight text-[13px]",
-              showMonths ? "text-[var(--accent)]" : "text-[var(--fg-primary)] hover:text-[var(--accent)]"
+              showMonths ? "text-[var(--accent)]" : "text-[var(--fg-primary)] hover:text-[var(--accent)]",
+              currentPeriod !== 'month' && "cursor-default"
             )}
           >
-            {formatMonthLabel(currentMonth)}
-            <ChevronDown size={12} className={cn("transition-transform", showMonths ? "rotate-180" : "")} />
+            {currentPeriod === 'quarter' ? getQuarterLabel(currentMonth)
+              : currentPeriod === 'year' ? getYearLabel(currentMonth)
+              : formatMonthLabel(currentMonth)}
+            {currentPeriod === 'month' && <ChevronDown size={12} className={cn("transition-transform", showMonths ? "rotate-180" : "")} />}
           </button>
 
           <button
@@ -136,12 +171,12 @@ export default function PeriodPicker() {
 
       <AnimatePresence>
         {/* Dropdown MESI */}
-        {showMonths && (
+        {showMonths && currentPeriod === 'month' && (
           <motion.div
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            className="absolute top-14 right-0 z-50 glass bg-[var(--bg-surface)] p-2 rounded-[2rem] border border-[var(--border-default)] shadow-2xl w-64 max-h-[400px] overflow-y-auto custom-scrollbar"
+            className="absolute top-24 right-0 z-50 glass bg-[var(--bg-surface)] p-2 rounded-[2rem] border border-[var(--border-default)] shadow-2xl w-64 max-h-[400px] overflow-y-auto custom-scrollbar"
           >
             <div className="p-2 space-y-1">
               <button
@@ -170,12 +205,12 @@ export default function PeriodPicker() {
         )}
 
         {/* Timeline GIORNI */}
-        {showDays && (
+        {showDays && currentPeriod === 'month' && (
           <motion.div
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            className="absolute top-14 right-0 z-50 glass bg-[var(--bg-surface)] p-4 rounded-[2rem] border border-[var(--border-default)] shadow-2xl w-[90vw] max-w-[400px]"
+            className="absolute top-24 right-0 z-50 glass bg-[var(--bg-surface)] p-4 rounded-[2rem] border border-[var(--border-default)] shadow-2xl w-[90vw] max-w-[400px]"
           >
             <div className="flex items-center justify-between mb-4 px-2">
                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--fg-subtle)]">Seleziona Giorno</span>

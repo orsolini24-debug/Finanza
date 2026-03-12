@@ -5,7 +5,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import TransactionsTable from "@/components/TransactionsTable";
-import { getCurrentMonth, getPeriodRange, getDayRange } from "@/lib/period";
+import { getCurrentMonth, getPeriodRange, getDayRange, getQuarterRange, getYearRange, type PeriodMode } from "@/lib/period";
 import { getSuggestedRules } from "@/app/actions/transactions";
 import { detectTransferCandidates } from "@/app/actions/transfers";
 import RuleSuggestions from "@/components/transactions/RuleSuggestions";
@@ -22,8 +22,13 @@ export default async function TransactionsPage({
   const resolvedSearchParams = await searchParams;
   const month = (resolvedSearchParams.month as string) || getCurrentMonth();
   const day = resolvedSearchParams.day as string;
+  const period = (resolvedSearchParams.period as PeriodMode) || 'month';
   
-  const { start, end } = day ? getDayRange(month, day) : getPeriodRange(month);
+  const { start, end } = day 
+    ? getDayRange(month, day) 
+    : period === 'quarter' ? getQuarterRange(month)
+    : period === 'year' ? getYearRange(month)
+    : getPeriodRange(month);
 
   const userId = (session.user as any).id;
   const workspace = await prisma.workspace.findFirst({

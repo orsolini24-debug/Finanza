@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Sparkles, RefreshCw, X, ArrowRight, ShieldCheck, Brain, TrendingUp, Zap, ChevronRight } from 'lucide-react'
+import { Sparkles, RefreshCw, X, ArrowRight, ShieldCheck, Brain, TrendingUp, Zap, ChevronRight, Info } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
@@ -85,6 +85,7 @@ export default function AIInsights({ workspaceId, month }: { workspaceId: string
   const [data, setData] = useState<AIResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedInsight, setSelectedInsight] = useState<AIInsight | null>(null)
+  const [showRatingModal, setShowRatingModal] = useState(false)
   const [error, setError] = useState(false)
 
   const cacheKey = `ai-insights-${workspaceId}-${month}`
@@ -124,7 +125,6 @@ export default function AIInsights({ workspaceId, month }: { workspaceId: string
 
   useEffect(() => { fetchInsights() }, [workspaceId, month])
 
-  // ── Loading state ──────────────────────────────────────────────
   if (loading) {
     return (
       <div className="space-y-6">
@@ -135,9 +135,6 @@ export default function AIInsights({ workspaceId, month }: { workspaceId: string
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[0,1,2,3].map(i => <div key={i} className="h-44 skeleton rounded-[2.5rem]" style={{ animationDelay: `${i * 150}ms` }} />)}
         </div>
-        <p className="text-center text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest animate-pulse">
-          Il consulente sta analizzando i tuoi dati…
-        </p>
       </div>
     )
   }
@@ -169,34 +166,32 @@ export default function AIInsights({ workspaceId, month }: { workspaceId: string
             <p className="text-[10px] font-bold text-[var(--fg-muted)] uppercase tracking-[0.2em]">Valutazione patrimoniale personale</p>
           </div>
         </div>
-        <button
-          onClick={() => fetchInsights(true)}
-          className="p-3 bg-[var(--bg-elevated)] hover:text-[var(--accent)] rounded-2xl border border-[var(--border-default)] transition-all hover:border-[var(--accent)]/40 active:scale-90"
-          title="Aggiorna analisi"
-        >
+        <button onClick={() => fetchInsights(true)} className="p-3 bg-[var(--bg-elevated)] hover:text-[var(--accent)] rounded-2xl border border-[var(--border-default)] transition-all active:scale-90">
           <RefreshCw size={16} />
         </button>
       </div>
 
-      {/* Score + Personality row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
         {/* Score Card */}
         <motion.div
           initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
-          className="glass p-8 rounded-[3rem] border-2 flex flex-col items-center text-center relative overflow-hidden"
+          onClick={() => setShowRatingModal(true)}
+          className="glass p-8 rounded-[3rem] border-2 flex flex-col items-center text-center relative overflow-hidden cursor-pointer hover:border-[var(--accent)]/50 transition-colors group"
           style={{ borderColor: `color-mix(in srgb, ${scoreColor} 30%, transparent)` }}
         >
-          <div className="absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl opacity-30" style={{ background: scoreColor }} />
+          <div className="absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl opacity-30 group-hover:opacity-50 transition-opacity" style={{ background: scoreColor }} />
           <ScoreArc score={data.rating.score} />
           <div className="grid grid-cols-2 gap-2 w-full mt-6">
             {Object.entries(data.rating.breakdown).map(([k, v]) => (
               <div key={k} className="p-2.5 bg-[var(--bg-input)] rounded-xl border border-[var(--border-subtle)]">
                 <p className="text-[8px] font-black text-[var(--fg-subtle)] uppercase tracking-widest mb-0.5">{BREAKDOWN_LABELS[k] ?? k}</p>
-                <p className="text-[11px] font-black text-[var(--fg-primary)]">{v}</p>
+                <p className="text-[10px] font-black text-[var(--fg-primary)]">{v}</p>
               </div>
             ))}
           </div>
+          <p className="text-[8px] font-black uppercase tracking-widest text-[var(--fg-subtle)] mt-4 flex items-center justify-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+            <ChevronRight size={8} /> Scopri come migliorare
+          </p>
         </motion.div>
 
         {/* Personality Card */}
@@ -208,32 +203,24 @@ export default function AIInsights({ workspaceId, month }: { workspaceId: string
             <div className="w-16 h-16 bg-gradient-to-br from-[var(--accent)] to-[var(--income)] rounded-2xl flex items-center justify-center shrink-0 shadow-[0_8px_24px_var(--glow-accent)]">
               <Brain size={32} className="text-white" />
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 text-left">
               <span className="px-2.5 py-1 bg-[var(--accent-dim)] text-[var(--accent)] text-[9px] font-black uppercase tracking-widest rounded-full border border-[var(--accent)]/20">
                 Profilo psico-finanziario
               </span>
               <h3 className="text-2xl font-display font-black text-[var(--fg-primary)] mt-1.5 leading-tight">{data.personality.type}</h3>
             </div>
           </div>
-
-          {/* Description discorsiva */}
-          {data.personality.description && (
-            <p className="text-sm text-[var(--fg-muted)] font-medium leading-relaxed border-l-2 border-[var(--accent)]/30 pl-4">
-              {data.personality.description}
-            </p>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-auto text-left">
             <div className="flex items-start gap-3 p-4 bg-[var(--bg-elevated)]/60 rounded-2xl border border-[var(--border-subtle)]">
               <Zap size={15} className="text-[var(--warning)] shrink-0 mt-0.5" />
-              <div className="min-w-0">
+              <div>
                 <p className="text-[8px] font-black text-[var(--fg-subtle)] uppercase tracking-widest mb-1">Bias rilevato</p>
                 <p className="text-[11px] font-bold text-[var(--fg-primary)] leading-snug">{data.personality.primaryBias}</p>
               </div>
             </div>
             <div className="flex items-start gap-3 p-4 bg-[var(--bg-elevated)]/60 rounded-2xl border border-[var(--border-subtle)]">
               <TrendingUp size={15} className="text-[var(--accent)] shrink-0 mt-0.5" />
-              <div className="min-w-0">
+              <div>
                 <p className="text-[8px] font-black text-[var(--fg-subtle)] uppercase tracking-widest mb-1">Percorso di crescita</p>
                 <p className="text-[11px] font-bold text-[var(--fg-primary)] leading-snug">{data.personality.migrationPath}</p>
               </div>
@@ -249,130 +236,99 @@ export default function AIInsights({ workspaceId, month }: { workspaceId: string
           return (
             <motion.div
               key={idx}
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 + idx * 0.08, type: 'spring', damping: 24 }}
+              initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + idx * 0.08 }}
               onClick={() => setSelectedInsight(insight)}
-              className="glass p-6 rounded-[2.5rem] border border-[var(--border-subtle)] hover:border-[var(--accent)]/40 transition-all cursor-pointer group flex flex-col h-full active:scale-95 select-none"
+              className="glass p-6 rounded-[2.5rem] border border-[var(--border-subtle)] hover:border-[var(--accent)]/40 transition-all cursor-pointer group flex flex-col h-full active:scale-95"
             >
-              {/* Type badge */}
               <div className="flex items-center justify-between mb-4">
-                <span
-                  className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
-                  style={{ color: meta.color, background: meta.dim }}
-                >
-                  {meta.label}
-                </span>
-                <span className="text-2xl group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-300">
-                  {insight.icon}
-                </span>
+                <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ color: meta.color, background: meta.dim }}>{meta.label}</span>
+                <span className="text-2xl group-hover:scale-110 transition-transform">{insight.icon}</span>
               </div>
-
-              <h4 className="text-[13px] font-black text-[var(--fg-primary)] mb-2 leading-tight tracking-tight">
-                {insight.title}
-              </h4>
-              <p className="text-[11px] text-[var(--fg-muted)] font-medium leading-relaxed line-clamp-3 flex-1">
-                {insight.message}
-              </p>
-
+              <h4 className="text-[13px] font-black text-[var(--fg-primary)] mb-2 leading-tight uppercase text-left">{insight.title}</h4>
+              <p className="text-[11px] text-[var(--fg-muted)] font-medium leading-relaxed line-clamp-3 flex-1 text-left">{insight.message}</p>
               <div className="mt-4 flex items-center gap-1 text-[9px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: meta.color }}>
-                Leggi l'analisi <ChevronRight size={10} />
+                Dettagli <ArrowRight size={10} />
               </div>
             </motion.div>
           )
         })}
       </div>
 
-      {/* Detail Modal */}
+      {/* Rating Detail Modal */}
       <AnimatePresence>
-        {selectedInsight && (
+        {showRatingModal && (
           <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="absolute inset-0 bg-black/85 backdrop-blur-2xl"
-              onClick={() => setSelectedInsight(null)}
+              onClick={() => setShowRatingModal(false)}
             />
             <motion.div
-              initial={{ opacity: 0, y: 60 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 60 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 300 }}
-              className="relative w-full sm:max-w-2xl glass-heavy bg-[var(--bg-surface)] rounded-t-[3rem] sm:rounded-[3rem] border border-[var(--border-default)] shadow-[var(--shadow-xl)] flex flex-col"
+              initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 60 }}
+              className="relative w-full sm:max-w-2xl glass-heavy bg-[var(--bg-surface)] rounded-t-[3rem] sm:rounded-[3rem] border border-[var(--border-default)] shadow-2xl flex flex-col"
               style={{ maxHeight: '88dvh' }}
             >
-              {/* Close */}
-              <button
-                onClick={() => setSelectedInsight(null)}
-                className="absolute top-6 right-6 p-3 rounded-2xl hover:bg-[var(--bg-elevated)] text-[var(--fg-muted)] hover:text-[var(--fg-primary)] transition-all z-10"
-              >
-                <X size={22} />
-              </button>
-
+              <button onClick={() => setShowRatingModal(false)} className="absolute top-6 right-6 p-3 rounded-2xl hover:bg-[var(--bg-elevated)] text-[var(--fg-muted)] hover:text-[var(--fg-primary)] transition-all z-10"><X size={22} /></button>
               <div className="overflow-y-auto flex-1 custom-scrollbar p-8 sm:p-10 space-y-8">
-                {/* Header */}
-                <div className="space-y-3 pr-12">
-                  <div className="flex items-center gap-3">
-                    <span className="text-5xl">{selectedInsight.icon}</span>
-                    <div>
-                      <span
-                        className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
-                        style={{
-                          color: INSIGHT_TYPE_META[selectedInsight.type]?.color,
-                          background: INSIGHT_TYPE_META[selectedInsight.type]?.dim,
-                        }}
-                      >
-                        {INSIGHT_TYPE_META[selectedInsight.type]?.label}
-                      </span>
-                      <h3 className="text-2xl sm:text-3xl font-display font-black text-[var(--fg-primary)] leading-tight tracking-tighter mt-1">
-                        {selectedInsight.title}
-                      </h3>
-                    </div>
+                <div className="space-y-1 pr-12 text-left">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-[var(--fg-subtle)]">Valutazione patrimoniale</p>
+                  <h3 className="text-3xl font-display font-black text-[var(--fg-primary)]">Score {data.rating.label} — {data.rating.score}/100</h3>
+                </div>
+                <ScoreArc score={data.rating.score} />
+                <div className="p-5 rounded-2xl border bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-left text-sm font-medium text-[var(--fg-muted)] leading-relaxed">
+                  {data.rating.score >= 80 ? "Il tuo punteggio è eccellente. Stai gestendo le finanze in modo solido su tutti i fronti." : data.rating.score >= 60 ? "Buon punteggio. Hai basi solide ma ci sono margini di miglioramento." : data.rating.score >= 40 ? "Punteggio sufficiente. Alcuni aspetti importanti richiedono attenzione." : "Punteggio critico. La situazione finanziaria presenta vulnerabilità significative."}
+                </div>
+                <div className="space-y-4 text-left">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-[var(--fg-subtle)]">Dettaglio pilastri</p>
+                  {Object.entries(data.rating.breakdown).map(([key, value]) => {
+                    const isGood = ['Eccellente', 'Buona', 'Controllato', 'Efficiente'].includes(value as string)
+                    const isMid  = ['Sufficiente', 'Presente', 'Moderato'].includes(value as string)
+                    const color  = isGood ? 'var(--income)' : isMid ? 'var(--warning)' : 'var(--expense)'
+                    const tips: Record<string, string> = {
+                      liquidity: 'Benchmark: 3-6 mesi di spese come fondo di emergenza. Sotto i 3 mesi sei esposto a imprevisti gravi.',
+                      savings:   'Benchmark: almeno il 10-20% del reddito mensile. Anche importi piccoli creano abitudine.',
+                      lifestyle: 'Regola 50/30/20: max 30% del reddito per spese voluttuarie. Tracciare le uscite aiuta.',
+                      strategy:  'Un piano attivo include: fondo emergenza, obiettivi definiti, investimento regolare.',
+                    }
+                    return (
+                      <div key={key} className="p-5 rounded-2xl border bg-[var(--bg-elevated)]" style={{ borderColor: `color-mix(in srgb, ${color} 20%, transparent)` }}>
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--fg-subtle)]">{BREAKDOWN_LABELS[key] ?? key}</p>
+                          <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full" style={{ color, background: `color-mix(in srgb, ${color} 15%, transparent)` }}>{value}</span>
+                        </div>
+                        <p className="text-[12px] text-[var(--fg-muted)] font-medium leading-relaxed">{tips[key] ?? ''}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+              <div className="p-6 border-t border-[var(--border-subtle)] shrink-0">
+                <button onClick={() => setShowRatingModal(false)} className="w-full py-4 bg-[var(--fg-primary)] text-[var(--bg-base)] font-black uppercase tracking-widest text-[12px] rounded-2xl hover:opacity-90 transition-all">Ho capito</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Insight Detail Modal */}
+      <AnimatePresence>
+        {selectedInsight && (
+          <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/85 backdrop-blur-2xl" onClick={() => setSelectedInsight(null)} />
+            <motion.div initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 60 }} className="relative w-full max-w-2xl glass-heavy bg-[var(--bg-surface)] rounded-t-[3rem] sm:rounded-[3rem] border border-[var(--border-default)] shadow-2xl flex flex-col" style={{ maxHeight: '88dvh' }}>
+              <div className="overflow-y-auto flex-1 custom-scrollbar p-8 sm:p-12 text-left">
+                <button onClick={() => setSelectedInsight(null)} className="absolute top-8 right-8 p-3 rounded-2xl hover:bg-[var(--bg-elevated)] text-[var(--fg-muted)] transition-all"><X size={24} /></button>
+                <div className="text-8xl mb-8">{selectedInsight.icon}</div>
+                <h3 className="text-3xl sm:text-4xl font-display font-black text-[var(--fg-primary)] leading-none tracking-tighter mb-6">{selectedInsight.title}</h3>
+                <p className="text-lg sm:text-xl text-[var(--fg-muted)] font-medium leading-relaxed mb-10">{selectedInsight.message}</p>
+                <div className="p-6 bg-[var(--bg-elevated)] rounded-[2rem] border border-[var(--border-subtle)] flex items-start gap-4">
+                  <div className="p-3 bg-[var(--accent)] text-[var(--accent-on)] rounded-2xl shadow-xl"><Info size={24} /></div>
+                  <div>
+                    <p className="text-xs font-black text-[var(--fg-primary)] uppercase tracking-widest mb-1">Nota del Ministro</p>
+                    <p className="text-sm text-[var(--fg-muted)] leading-relaxed">Questa raccomandazione è basata su modelli di ottimizzazione matematica e flussi di cassa reali.</p>
                   </div>
                 </div>
-
-                {/* Sommario (message breve) */}
-                <p className="text-base font-bold text-[var(--fg-primary)] leading-relaxed border-l-2 pl-4" style={{ borderColor: INSIGHT_TYPE_META[selectedInsight.type]?.color }}>
-                  {selectedInsight.message}
-                </p>
-
-                {/* Analisi discorsiva (detail) */}
-                {selectedInsight.detail && (
-                  <div className="space-y-4">
-                    <p className="text-[9px] font-black text-[var(--fg-subtle)] uppercase tracking-widest">Analisi completa</p>
-                    <div className="text-[15px] text-[var(--fg-muted)] font-medium leading-[1.8] whitespace-pre-line">
-                      {selectedInsight.detail}
-                    </div>
-                  </div>
-                )}
-
-                {/* Action CTA */}
-                {selectedInsight.action && (
-                  <div
-                    className="p-5 rounded-[1.5rem] border flex items-start gap-4"
-                    style={{
-                      background: INSIGHT_TYPE_META[selectedInsight.type]?.dim,
-                      borderColor: `color-mix(in srgb, ${INSIGHT_TYPE_META[selectedInsight.type]?.color} 30%, transparent)`,
-                    }}
-                  >
-                    <Sparkles size={20} className="shrink-0 mt-0.5" style={{ color: INSIGHT_TYPE_META[selectedInsight.type]?.color }} />
-                    <div>
-                      <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: INSIGHT_TYPE_META[selectedInsight.type]?.color }}>
-                        Azione consigliata
-                      </p>
-                      <p className="text-sm font-bold text-[var(--fg-primary)] leading-snug">{selectedInsight.action}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="p-6 border-t border-[var(--border-subtle)] shrink-0">
-                <button
-                  onClick={() => setSelectedInsight(null)}
-                  className="w-full py-4 bg-[var(--fg-primary)] text-[var(--bg-base)] font-black uppercase tracking-widest text-[12px] rounded-2xl hover:opacity-90 active:scale-95 transition-all shadow-[var(--shadow-lg)]"
-                >
-                  Ho capito
-                </button>
+                <button onClick={() => setSelectedInsight(null)} className="w-full mt-8 py-5 bg-[var(--fg-primary)] text-[var(--bg-base)] font-black uppercase tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-95 transition-all">Ho Ricevuto l'Ordine</button>
               </div>
             </motion.div>
           </div>

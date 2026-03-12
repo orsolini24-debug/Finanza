@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useMemo } from 'react'
 import { Rule, Category } from '@prisma/client'
 import { Plus, Play, Pause, Trash2, Edit2, Zap, X, Check, Loader2, ChevronRight, ArrowRight, Tag, Hash, ChevronDown } from 'lucide-react'
 import { createRule, updateRule, deleteRule, toggleRule } from '@/app/actions/rules'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import QuickCategoryModal from '@/components/categories/QuickCategoryModal'
 
 type RuleWithCategory = Rule & { category: Category | null }
 
@@ -22,7 +23,15 @@ export default function RulesManager({ rules, categories }: RulesManagerProps) {
   const [form, setForm] = useState(defaultForm)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [showQuickCat, setShowQuickCat] = useState(false)
+  const [localCategories, setLocalCategories] = useState<Category[]>([])
   const router = useRouter()
+
+  const allCategories = useMemo(() => {
+    const merged = [...categories]
+    localCategories.forEach(lc => { if (!merged.find(c => c.id === lc.id)) merged.push(lc) })
+    return merged
+  }, [categories, localCategories])
 
   const openCreate = () => {
     setEditingRule(null)
@@ -83,6 +92,20 @@ export default function RulesManager({ rules, categories }: RulesManagerProps) {
 
   return (
     <div className="space-y-6">
+      {/* Quick Category Modal */}
+      {showQuickCat && (
+        <QuickCategoryModal
+          onClose={() => setShowQuickCat(false)}
+          onSuccess={(newCatId) => {
+            const tempCat = { id: newCatId, name: 'Nuova categoria', icon: null, type: 'BOTH', parentId: null, workspaceId: '', createdAt: new Date(), updatedAt: new Date() } as unknown as Category
+            setLocalCategories(prev => [...prev, tempCat])
+            setForm(f => ({ ...f, setCategoryId: newCatId }))
+            setShowQuickCat(false)
+            router.refresh()
+          }}
+        />
+      )}
+
       <div className="flex justify-end">
         <button
           onClick={openCreate}
@@ -222,7 +245,13 @@ export default function RulesManager({ rules, categories }: RulesManagerProps) {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest ml-1">Imposta Categoria</label>
+                <div className="flex items-center justify-between ml-1">
+                  <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest">Imposta Categoria</label>
+                  <button type="button" onClick={() => setShowQuickCat(true)}
+                    className="flex items-center gap-1 text-[9px] font-black uppercase text-[var(--accent)] hover:underline tracking-widest">
+                    <Plus size={10} /> Nuova
+                  </button>
+                </div>
                 <div className="relative">
                   <select
                     name="setCategoryId"
@@ -231,7 +260,7 @@ export default function RulesManager({ rules, categories }: RulesManagerProps) {
                     className="w-full px-4 py-3 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--fg-primary)] transition-all font-medium appearance-none cursor-pointer"
                   >
                     <option value="">— Nessuna categoria —</option>
-                    {categories.map(c => (
+                    {allCategories.map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>

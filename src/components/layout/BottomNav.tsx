@@ -2,14 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { LayoutDashboard, ArrowLeftRight, Target, PiggyBank, MoreHorizontal } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, Target, PiggyBank, MoreHorizontal, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
 
 const BOTTOM_NAV_ITEMS = [
   { href: '/app/dashboard', icon: LayoutDashboard, label: 'Home' },
   { href: '/app/transactions', icon: ArrowLeftRight, label: 'Movimenti' },
-  { href: '/app/budget', icon: Target, label: 'Budget' },
+  { href: '/app/simulator', icon: TrendingUp, label: 'Simula' },
   { href: '/app/goals', icon: PiggyBank, label: 'Obiettivi' },
   { href: '/app/recurring', icon: MoreHorizontal, label: 'Altro' },
 ]

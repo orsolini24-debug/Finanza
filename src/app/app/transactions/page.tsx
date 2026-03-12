@@ -10,6 +10,7 @@ import { getSuggestedRules } from "@/app/actions/transactions";
 import { detectTransferCandidates } from "@/app/actions/transfers";
 import RuleSuggestions from "@/components/transactions/RuleSuggestions";
 import TransferSuggestions from "@/components/transactions/TransferSuggestions";
+import SearchBar from "@/components/transactions/SearchBar";
 
 export default async function TransactionsPage({
   searchParams
@@ -75,6 +76,9 @@ export default async function TransactionsPage({
               ? `${stagedCount} moviment${stagedCount === 1 ? 'o' : 'i'} da confermare · ${transactions.length - stagedCount} registrat${transactions.length - stagedCount === 1 ? 'o' : 'i'} nel periodo`
               : 'Movimenti registrati nel periodo selezionato.'}
           </p>
+        </div>
+        <div className="flex-1 w-full md:max-w-md mt-4 md:mt-0">
+          <SearchBar workspaceId={workspace.id} />
         </div>
       </div>
 

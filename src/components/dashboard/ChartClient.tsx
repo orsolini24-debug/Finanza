@@ -1,10 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  Cell, PieChart, Pie, AreaChart, Area, Legend, ComposedChart, ReferenceLine
-} from 'recharts'
+import ReactECharts from 'echarts-for-react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -29,6 +26,7 @@ interface ChartCarouselProps {
 }
 
 const fmt = (n: number) => `€${n.toLocaleString('it-IT')}`
+const fmtShort = (n: number) => `€${n >= 1000 ? `${(n/1000).toFixed(0)}k` : n.toFixed(0)}`
 
 const CHART_INFO = [
   { id: 'cashflow', title: '💧 Cash Flow del Mese', subtitle: 'Flusso netto cumulativo — entrate meno uscite' },
@@ -36,6 +34,8 @@ const CHART_INFO = [
   { id: 'categories', title: '🍩 Spese per Categoria', subtitle: 'Distribuzione uscite del mese' },
   { id: 'savings', title: '📈 Trend Risparmio', subtitle: 'Risparmio netto mensile ultimi 6 mesi' }
 ]
+
+const COLORS = ['#f97066', '#fb923c', '#fbbf24', '#f43f5e', '#e879f9', '#a78bfa', '#94a3b8']
 
 export function ChartCarousel({ chartData, categoryData, monthlyData }: ChartCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0)
@@ -59,77 +59,82 @@ export function ChartCarousel({ chartData, categoryData, monthlyData }: ChartCar
 
   const renderActiveChart = () => {
     switch (activeIndex) {
-      case 0:
-        return (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="colorCash" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={chartData[chartData.length-1]?.amount >= 0 ? 'var(--income)' : 'var(--expense)'} stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor={chartData[chartData.length-1]?.amount >= 0 ? 'var(--income)' : 'var(--expense)'} stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle)" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--fg-muted)', fontSize: 10 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--fg-muted)', fontSize: 10 }} tickFormatter={(v) => `€${v}`} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: 'var(--bg-surface)', borderRadius: '16px', border: '1px solid var(--border-default)', boxShadow: 'var(--shadow-lg)' }}
-                formatter={(v: any) => [fmt(v), "Netto Cumulativo"]}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="amount" 
-                stroke={chartData[chartData.length-1]?.amount >= 0 ? 'var(--income)' : 'var(--expense)'} 
-                strokeWidth={3} 
-                fillOpacity={1} 
-                fill="url(#colorCash)" 
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        )
-      case 1:
-        return (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={monthlyData} margin={{ top: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle)" />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: 'var(--fg-muted)', fontSize: 10 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--fg-muted)', fontSize: 10 }} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: 'var(--bg-surface)', borderRadius: '16px', border: '1px solid var(--border-default)' }}
-                formatter={(v: any) => fmt(v)}
-              />
-              <Legend verticalAlign="top" align="right" iconType="circle" />
-              <Bar name="Entrate" dataKey="income" fill="var(--income)" radius={[4, 4, 0, 0]} barSize={20} />
-              <Bar name="Uscite" dataKey="expenses" fill="var(--expense)" radius={[4, 4, 0, 0]} barSize={20} />
-            </BarChart>
-          </ResponsiveContainer>
-        )
-      case 2:
+      case 0: {
+        const isPositive = (chartData[chartData.length - 1]?.amount || 0) >= 0
+        const color = isPositive ? 'var(--income)' : 'var(--expense)'
+        const option = {
+          backgroundColor: 'transparent',
+          tooltip: {
+            trigger: 'axis',
+            backgroundColor: 'var(--bg-surface)',
+            borderColor: 'var(--border-default)',
+            textStyle: { color: 'var(--fg-primary)' },
+            formatter: (params: any[]) => `${params[0].name}<br/>Netto Cumulativo: ${fmt(params[0].value)}`
+          },
+          grid: { left: '3%', right: '3%', bottom: '5%', top: '10%', containLabel: true },
+          xAxis: { type: 'category', data: chartData.map(d => d.name), axisLabel: { color: 'var(--fg-muted)', fontSize: 10 }, axisLine: { show: false }, axisTick: { show: false } },
+          yAxis: { type: 'value', axisLabel: { color: 'var(--fg-muted)', fontSize: 10, formatter: fmtShort }, splitLine: { lineStyle: { type: 'dashed', color: 'var(--border-subtle)', opacity: 0.6 } } },
+          series: [{
+            type: 'line', smooth: true,
+            data: chartData.map(d => d.amount),
+            lineStyle: { color, width: 3 },
+            symbol: 'circle', symbolSize: 6,
+            itemStyle: { color },
+            areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: `color-mix(in srgb, ${color} 30%, transparent)` }, { offset: 1, color: 'transparent' }] } }
+          }]
+        }
+        return <ReactECharts option={option} style={{ height: '100%', width: '100%' }} opts={{ renderer: 'canvas' }} />
+      }
+      case 1: {
+        const option = {
+          backgroundColor: 'transparent',
+          tooltip: {
+            trigger: 'axis',
+            backgroundColor: 'var(--bg-surface)',
+            borderColor: 'var(--border-default)',
+            textStyle: { color: 'var(--fg-primary)' },
+            formatter: (params: any[]) => params.map(p => `${p.seriesName}: ${fmt(p.value)}`).join('<br/>')
+          },
+          legend: { top: 0, right: 0, icon: 'circle', textStyle: { color: 'var(--fg-muted)' } },
+          grid: { left: '3%', right: '3%', bottom: '5%', top: '15%', containLabel: true },
+          xAxis: { type: 'category', data: monthlyData.map(d => d.month), axisLabel: { color: 'var(--fg-muted)', fontSize: 10 }, axisLine: { show: false }, axisTick: { show: false } },
+          yAxis: { type: 'value', axisLabel: { color: 'var(--fg-muted)', fontSize: 10, formatter: fmtShort }, splitLine: { lineStyle: { type: 'dashed', color: 'var(--border-subtle)', opacity: 0.6 } } },
+          series: [
+            { name: 'Entrate', type: 'bar', data: monthlyData.map(d => d.income), itemStyle: { color: 'var(--income)', borderRadius: [4, 4, 0, 0] }, barMaxWidth: 30 },
+            { name: 'Uscite', type: 'bar', data: monthlyData.map(d => d.expenses), itemStyle: { color: 'var(--expense)', borderRadius: [4, 4, 0, 0] }, barMaxWidth: 30 }
+          ]
+        }
+        return <ReactECharts option={option} style={{ height: '100%', width: '100%' }} opts={{ renderer: 'canvas' }} />
+      }
+      case 2: {
+        const option = {
+          backgroundColor: 'transparent',
+          tooltip: {
+            trigger: 'item',
+            backgroundColor: 'var(--bg-surface)',
+            borderColor: 'var(--border-default)',
+            textStyle: { color: 'var(--fg-primary)' },
+            formatter: '{b}: {c}'
+          },
+          series: [{
+            type: 'pie',
+            radius: ['50%', '80%'],
+            center: ['50%', '50%'],
+            itemStyle: { borderRadius: 4, borderColor: 'var(--bg-surface)', borderWidth: 2 },
+            label: { show: false },
+            data: categoryData.map((d, i) => ({ value: d.amount, name: d.name, itemStyle: { color: COLORS[i % COLORS.length] } }))
+          }]
+        }
         return (
           <div className="flex flex-col md:flex-row items-center h-full">
-            <div className="w-full md:w-1/2 h-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={categoryData}
-                    cx="50%" cy="50%"
-                    innerRadius={60} outerRadius={90}
-                    paddingAngle={5}
-                    dataKey="amount"
-                  >
-                    {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={['#f97066', '#fb923c', '#fbbf24', '#f43f5e', '#e879f9', '#a78bfa', '#94a3b8'][index % 7]} stroke="none" />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: 'var(--bg-surface)', borderRadius: '12px' }} formatter={(v: any) => fmt(v)} />
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="w-full md:w-1/2 h-full min-h-[250px]">
+              <ReactECharts option={option} style={{ height: '100%', width: '100%' }} opts={{ renderer: 'canvas' }} />
             </div>
             <div className="w-full md:w-1/2 space-y-2 px-4 overflow-y-auto max-h-[200px] custom-scrollbar">
               {categoryData.map((cat: any, i) => (
                 <div key={i} className="flex items-center justify-between group">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ['#f97066', '#fb923c', '#fbbf24', '#f43f5e', '#e879f9', '#a78bfa', '#94a3b8'][i % 7] }} />
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
                     <span className="text-[11px] font-bold text-[var(--fg-primary)] truncate max-w-[100px]">{cat.name}</span>
                   </div>
                   <span className="text-[10px] font-mono font-bold text-[var(--fg-muted)]">{fmt(cat.amount)}</span>
@@ -138,28 +143,32 @@ export function ChartCarousel({ chartData, categoryData, monthlyData }: ChartCar
             </div>
           </div>
         )
-      case 3:
-        return (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={monthlyData}>
-              <defs>
-                <linearGradient id="colorNet" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.2}/>
-                  <stop offset="95%" stopColor="var(--accent)" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle)" />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: 'var(--fg-muted)', fontSize: 10 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--fg-muted)', fontSize: 10 }} tickFormatter={(v) => `€${v}`} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: 'var(--bg-surface)', borderRadius: '16px', border: '1px solid var(--border-default)' }}
-                formatter={(v: any) => [fmt(v), "Risparmio Netto"]}
-              />
-              <ReferenceLine y={0} stroke="var(--border-strong)" strokeDasharray="3 3" />
-              <Area type="monotone" dataKey="net" stroke="var(--accent)" strokeWidth={3} fillOpacity={1} fill="url(#colorNet)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        )
+      }
+      case 3: {
+        const option = {
+          backgroundColor: 'transparent',
+          tooltip: {
+            trigger: 'axis',
+            backgroundColor: 'var(--bg-surface)',
+            borderColor: 'var(--border-default)',
+            textStyle: { color: 'var(--fg-primary)' },
+            formatter: (params: any[]) => `${params[0].name}<br/>Risparmio Netto: ${fmt(params[0].value)}`
+          },
+          grid: { left: '3%', right: '3%', bottom: '5%', top: '10%', containLabel: true },
+          xAxis: { type: 'category', data: monthlyData.map(d => d.month), axisLabel: { color: 'var(--fg-muted)', fontSize: 10 }, axisLine: { show: false }, axisTick: { show: false } },
+          yAxis: { type: 'value', axisLabel: { color: 'var(--fg-muted)', fontSize: 10, formatter: fmtShort }, splitLine: { lineStyle: { type: 'dashed', color: 'var(--border-subtle)', opacity: 0.6 } } },
+          series: [{
+            type: 'line', smooth: true,
+            data: monthlyData.map(d => d.net),
+            lineStyle: { color: 'var(--accent)', width: 3 },
+            symbol: 'circle', symbolSize: 6,
+            itemStyle: { color: 'var(--accent)' },
+            areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'color-mix(in srgb, var(--accent) 20%, transparent)' }, { offset: 1, color: 'transparent' }] } },
+            markLine: { data: [{ yAxis: 0, lineStyle: { color: 'var(--border-strong)', type: 'dashed' }, label: { show: false }, symbol: 'none' }] }
+          }]
+        }
+        return <ReactECharts option={option} style={{ height: '100%', width: '100%' }} opts={{ renderer: 'canvas' }} />
+      }
       default:
         return null
     }
@@ -214,46 +223,55 @@ export function ChartCarousel({ chartData, categoryData, monthlyData }: ChartCar
   )
 }
 
-// Mantengo gli export originali per compatibilità se usati altrove
 export function OverviewChart({ data }: { data: ChartData[] }) {
+  const option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'var(--bg-surface)',
+      borderColor: 'var(--border-default)',
+      textStyle: { color: 'var(--fg-primary)' },
+      formatter: (params: any[]) => `${params[0].name}<br/>${fmt(params[0].value)}`
+    },
+    grid: { left: '3%', right: '3%', bottom: '5%', top: '10%', containLabel: true },
+    xAxis: { type: 'category', data: data.map(d => d.name), axisLabel: { color: 'var(--fg-muted)', fontSize: 10 }, axisLine: { show: false }, axisTick: { show: false } },
+    yAxis: { type: 'value', axisLabel: { color: 'var(--fg-muted)', fontSize: 10, formatter: fmtShort }, splitLine: { lineStyle: { type: 'dashed', color: 'var(--border-subtle)', opacity: 0.6 } } },
+    series: [{
+      type: 'bar',
+      data: data.map(d => ({ value: d.amount, itemStyle: { color: d.amount >= 0 ? 'var(--income)' : 'var(--expense)' } })),
+      itemStyle: { borderRadius: [6, 6, 0, 0] },
+      barMaxWidth: 32
+    }]
+  }
   return (
     <div className="h-[300px] w-full mt-4">
-      <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle)" />
-          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--fg-muted)', fontSize: 10, fontWeight: 600 }} dy={10} />
-          <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--fg-muted)', fontSize: 10, fontWeight: 600 }} tickFormatter={(value) => `€${value}`} />
-          <Tooltip 
-            cursor={{ fill: 'var(--bg-elevated)', opacity: 0.4 }}
-            contentStyle={{ backgroundColor: 'var(--bg-surface)', borderRadius: '16px', border: '1px solid var(--border-default)', boxShadow: 'var(--shadow-lg)' }}
-            itemStyle={{ color: 'var(--accent)', fontWeight: 700 }}
-            labelStyle={{ color: 'var(--fg-primary)', marginBottom: '4px', fontWeight: 800 }}
-          />
-          <Bar dataKey="amount" radius={[6, 6, 0, 0]} barSize={32}>
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.amount >= 0 ? 'var(--income)' : 'var(--expense)'} />
-            ))}
-          </Bar>
-        </ComposedChart>
-      </ResponsiveContainer>
+      <ReactECharts option={option} style={{ height: '100%', width: '100%' }} opts={{ renderer: 'canvas' }} />
     </div>
   )
 }
 
 export function CategoriesPieChart({ data }: { data: ChartData[] }) {
-  const COLORS = ['#f97066', '#fb923c', '#fbbf24', '#f43f5e', '#e879f9', '#a78bfa', '#38bdf8'];
+  const option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'var(--bg-surface)',
+      borderColor: 'var(--border-default)',
+      textStyle: { color: 'var(--fg-primary)' },
+      formatter: '{b}: {c}'
+    },
+    series: [{
+      type: 'pie',
+      radius: ['50%', '80%'],
+      center: ['50%', '50%'],
+      itemStyle: { borderRadius: 4, borderColor: 'var(--bg-surface)', borderWidth: 2 },
+      label: { show: false },
+      data: data.map((d, i) => ({ value: d.amount, name: d.name, itemStyle: { color: COLORS[i % COLORS.length] } }))
+    }]
+  }
   return (
     <div className="h-[240px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie data={data} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="amount">
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
-            ))}
-          </Pie>
-          <Tooltip contentStyle={{ backgroundColor: 'var(--bg-surface)', borderRadius: '12px', border: '1px solid var(--border-default)' }} />
-        </PieChart>
-      </ResponsiveContainer>
+      <ReactECharts option={option} style={{ height: '100%', width: '100%' }} opts={{ renderer: 'canvas' }} />
     </div>
   )
 }

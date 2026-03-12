@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import dynamic from 'next/dynamic';
 
 const CategoryManager = dynamic(() => import("@/components/categories/CategoryManager"), {
+  ssr: false,
   loading: () => <div className="h-96 skeleton rounded-[3rem] animate-pulse bg-[var(--bg-elevated)]" />
 });
 

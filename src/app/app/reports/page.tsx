@@ -4,8 +4,15 @@ import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { BarChart3, TrendingUp, TrendingDown, Target, PieChart } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { ReportsClient } from "@/components/reports/ReportsClient";
-import CashFlowChart from "@/components/reports/CashFlowChart";
+import dynamic from 'next/dynamic';
+
+const ReportsClient = dynamic(() => import("@/components/reports/ReportsClient").then(mod => mod.ReportsClient), {
+  loading: () => <div className="h-96 skeleton rounded-[3rem] animate-pulse bg-[var(--bg-elevated)]" />
+});
+
+const CashFlowChart = dynamic(() => import("@/components/reports/CashFlowChart"), {
+  loading: () => <div className="h-96 skeleton rounded-[3rem] animate-pulse bg-[var(--bg-elevated)]" />
+});
 
 export default async function ReportsPage() {
   const session = await getServerSession(authOptions);

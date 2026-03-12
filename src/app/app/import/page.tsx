@@ -267,7 +267,21 @@ export default function ImportPage() {
             <CheckCircle2 size={48} className="mx-auto text-[var(--income)] mb-4" />
             <h3 className="text-xl font-bold mb-2">Completato!</h3>
             <p className="text-sm text-[var(--fg-muted)] mb-6">Importate {result.importedCount} transazioni.</p>
-            <button onClick={() => {setResult(null); setStep(1)}} className="px-6 py-2 bg-[var(--accent)] text-white rounded-xl font-bold">Nuovo Import</button>
+            
+            <div className="bg-[var(--accent-dim)]/10 border border-[var(--accent)]/20 p-4 rounded-2xl mb-6 text-left flex items-start gap-4">
+              <div className="p-2 bg-[var(--accent-dim)] text-[var(--accent)] rounded-xl mt-0.5">
+                <Sparkles size={18} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[var(--fg-primary)] mb-1">Suggerimento AI</p>
+                <p className="text-xs text-[var(--fg-muted)] mb-3">Hai appena importato nuovi movimenti. Vai alla pagina Transazioni per rilevare automaticamente eventuali trasferimenti tra i tuoi conti.</p>
+                <button onClick={() => router.push('/app/transactions')} className="text-xs font-bold text-[var(--accent)] hover:underline flex items-center gap-1">
+                  Vai alle Transazioni <ArrowRight size={12} />
+                </button>
+              </div>
+            </div>
+
+            <button onClick={() => {setResult(null); setStep(1)}} className="px-6 py-2 bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--fg-primary)] rounded-xl font-bold hover:bg-[var(--bg-surface)] transition-all">Nuovo Import</button>
           </div>
         ) : step === 1 ? (
           <div onClick={() => document.getElementById('csv-upload')?.click()} className="p-12 border-2 border-dashed border-[var(--border-default)] rounded-[2rem] text-center cursor-pointer hover:bg-[var(--bg-elevated)] transition-all">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, memo } from 'react'
 import Papa from 'papaparse'
 import {
   Upload, CheckCircle2, AlertCircle, FileText, ArrowRight,
@@ -46,9 +46,8 @@ function colLetter(idx: number): string {
   return s
 }
 
-// ── Keyword con peso (score) per auto-detect ────────────────────
-// "saldo" è escluso da KW_AMOUNT → è il saldo progressivo, non il movimento
-type KWEntry = [string, number]  // [pattern, score]
+// ── Keyword con peso per auto-detect ───────────────────────────
+type KWEntry = [string, number]
 
 const KW_DATE: KWEntry[] = [
   ['data operazione', 4], ['data contabile', 4], ['data mov', 4],
@@ -62,6 +61,7 @@ const KW_AMOUNT: KWEntry[] = [
   ['addebito', 3], ['accredito', 3], ['moviment', 3],
   ['dare', 2], ['avere', 2], ['cifra', 2], ['sum', 2],
   ['valore', 1], ['totale', 1],
+  // "saldo" escluso — è il saldo progressivo
 ]
 const KW_DESC: KWEntry[] = [
   ['causale', 4], ['descrizione', 4], ['description', 4],
@@ -86,7 +86,7 @@ function scoreField(header: string, keywords: KWEntry[]): number {
   const low = header.toLowerCase()
   let best = 0
   for (const [pattern, pts] of keywords) {
-    if (low === pattern)       { best = Math.max(best, pts + 2); break } // exact match bonus
+    if (low === pattern)       { best = Math.max(best, pts + 2); break }
     if (low.includes(pattern)) { best = Math.max(best, pts) }
   }
   return best
@@ -96,20 +96,36 @@ function sampleValues(rows: CSVRow[], header: string, n = 5): string[] {
   return rows.slice(0, n).map(r => (r[header] ?? '').trim()).filter(Boolean)
 }
 
-const isDateLike = (v: string) =>
-  /^\d{1,4}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/.test(v) ||
-  /^\d{4}-\d{2}-\d{2}/.test(v)
+// ── Pattern matching ─────────────────────────────────────────────
+const DATE_PATTERN = /^\d{1,4}[\/\-\.]\d{1,2}([\/\-\.]\d{2,4})?/
 
-const isAmountLike = (v: string) => {
-  const clean = v.replace(/[€$£\s]/g, '').replace(',', '.')
-  const n = parseFloat(clean.replace(/,/g, ''))
-  return !isNaN(n) && Math.abs(n) < 1_000_000
+const isDateLike = (v: string) =>
+  DATE_PATTERN.test(v.trim()) || /^\d{4}-\d{2}-\d{2}/.test(v.trim())
+
+// isAmountLike: usa la stessa logica di parseAmount per essere coerente
+// ed esclude esplicitamente pattern simili a date
+const isAmountLike = (v: string): boolean => {
+  const trimmed = v.trim()
+  if (!trimmed) return false
+  // Esclude valori simili a date (es. "11/03/2026", "11.03.2026")
+  if (DATE_PATTERN.test(trimmed)) return false
+
+  let s = trimmed.replace(/[€$£\s]/g, '')
+  if (s.endsWith('-')) s = '-' + s.slice(0, -1)
+  const lastComma = s.lastIndexOf(',')
+  const lastDot   = s.lastIndexOf('.')
+  if (lastComma > lastDot)      s = s.replace(/\./g, '').replace(',', '.')
+  else if (lastDot > lastComma) s = s.replace(/,/g, '')
+  else                          s = s.replace(',', '.')
+
+  const n = parseFloat(s)
+  return !isNaN(n) && s.length > 0 && Math.abs(n) < 100_000_000
 }
 
 function buildConfidence(kwScore: number, valueMatch: boolean): FieldConfidence {
   const total = kwScore + (valueMatch ? 2 : 0)
-  if (total >= 5) return { level: 'certain',  pct: 95, reason: 'Riconosciuto con certezza dal nome colonna e dal contenuto' }
-  if (total >= 3) return { level: 'probable', pct: 70, reason: 'Ipotizzato dal nome della colonna — verifica che sia corretto prima di procedere' }
+  if (total >= 5) return { level: 'certain',   pct: 95, reason: 'Riconosciuto con certezza dal nome colonna e dal contenuto' }
+  if (total >= 3) return { level: 'probable',  pct: 70, reason: 'Ipotizzato dal nome della colonna — verifica che sia corretto prima di procedere' }
   if (total >= 1) return { level: 'uncertain', pct: 35, reason: 'Corrispondenza debole: il sistema non è sicuro. Conferma o cambia la selezione' }
   return            { level: 'none',     pct: 0,  reason: 'Campo non rilevato automaticamente — selezione manuale richiesta' }
 }
@@ -118,65 +134,139 @@ function autoDetect(headers: string[], rows: CSVRow[]): {
   mapping: Mapping
   confidence: Record<keyof Mapping, FieldConfidence>
 } {
-  type Candidate = { h: string; kwScore: number; valMatch: boolean; conf: FieldConfidence }
+  type Candidate = { h: string; conf: FieldConfidence }
 
-  const candidates = (kws: KWEntry[], valueFn?: (v: string) => boolean, exclude: string[] = []): Candidate[] =>
+  const rank = (kws: KWEntry[], valueFn?: (v: string) => boolean, exclude: string[] = []): Candidate[] =>
     headers
       .filter(h => !exclude.includes(h))
       .map(h => {
         const kwScore  = scoreField(h, kws)
-        const vals     = sampleValues(rows, h)
-        const valMatch = valueFn ? vals.some(valueFn) : false
-        return { h, kwScore, valMatch, conf: buildConfidence(kwScore, valMatch) }
+        const valMatch = valueFn ? sampleValues(rows, h).some(valueFn) : false
+        return { h, conf: buildConfidence(kwScore, valMatch) }
       })
       .sort((a, b) => b.conf.pct - a.conf.pct)
 
-  const dateCands   = candidates(KW_DATE,           isDateLike)
-  const dateH       = dateCands[0]?.h ?? ''
-  const dateConf    = dateCands[0]?.conf ?? buildConfidence(0, false)
+  const NONE: FieldConfidence = buildConfidence(0, false)
 
-  const amtCands    = candidates(KW_AMOUNT,          isAmountLike, [dateH])
-  const amountH     = amtCands[0]?.h ?? ''
-  const amountConf  = amtCands[0]?.conf ?? buildConfidence(0, false)
+  const dateCands = rank(KW_DATE, isDateLike)
+  const dateH     = dateCands[0]?.h ?? ''
+  const dateConf  = dateCands[0]?.conf ?? NONE
 
-  const descCands   = candidates(KW_DESC,            undefined, [dateH, amountH])
-  const descH       = descCands[0]?.h ?? ''
-  const descConf    = descCands[0]?.conf ?? buildConfidence(0, false)
+  const amtCands  = rank(KW_AMOUNT, isAmountLike, [dateH])
+  const amountH   = amtCands[0]?.h ?? ''
+  const amountConf = amtCands[0]?.conf ?? NONE
 
-  const cpCands     = candidates(KW_COUNTERPART,     undefined, [dateH, amountH, descH])
-  const cpH         = (cpCands[0]?.conf.pct ?? 0) > 0 ? cpCands[0]!.h : ''
+  const descCands = rank(KW_DESC, undefined, [dateH, amountH])
+  const descH     = descCands[0]?.h ?? ''
+  const descConf  = descCands[0]?.conf ?? NONE
+
+  const cpCands   = rank(KW_COUNTERPART, undefined, [dateH, amountH, descH])
+  const cpH       = (cpCands[0]?.conf.pct ?? 0) > 0 ? cpCands[0]!.h : ''
   const cpConf: FieldConfidence = cpH
     ? cpCands[0]!.conf
     : { level: 'none', pct: 0, reason: 'Campo opzionale — seleziona se presente nel file' }
 
-  const pmCands     = candidates(KW_PAYMENT_METHOD,  undefined, [dateH, amountH, descH, cpH])
-  const pmH         = (pmCands[0]?.conf.pct ?? 0) > 0 ? pmCands[0]!.h : ''
+  const pmCands   = rank(KW_PAYMENT_METHOD, undefined, [dateH, amountH, descH, cpH])
+  const pmH       = (pmCands[0]?.conf.pct ?? 0) > 0 ? pmCands[0]!.h : ''
   const pmConf: FieldConfidence = pmH
     ? pmCands[0]!.conf
     : { level: 'none', pct: 0, reason: 'Nessuna colonna rilevata — il metodo resterà vuoto e sarà assegnabile riga per riga in revisione' }
 
   return {
-    mapping: { date: dateH, amount: amountH, description: descH, counterpart: cpH, paymentMethod: pmH },
+    mapping:    { date: dateH, amount: amountH, description: descH, counterpart: cpH, paymentMethod: pmH },
     confidence: { date: dateConf, amount: amountConf, description: descConf, counterpart: cpConf, paymentMethod: pmConf },
   }
 }
 
-// ── Formattazione importo per preview ───────────────────────────
+// ── Formattazione importo per preview (stessa logica di parseAmount) ──
 function fmtAmount(raw: string) {
-  if (!raw) return <span style={{ color: 'var(--fg-subtle)' }}>—</span>
+  if (!raw?.trim()) return <span style={{ color: 'var(--fg-subtle)' }}>—</span>
   let s = raw.trim().replace(/[€$£\s]/g, '')
   if (s.endsWith('-')) s = '-' + s.slice(0, -1)
   const lastComma = s.lastIndexOf(',')
   const lastDot   = s.lastIndexOf('.')
-  if (lastComma > lastDot) s = s.replace(/\./g, '').replace(',', '.')
+  if (lastComma > lastDot)      s = s.replace(/\./g, '').replace(',', '.')
   else if (lastDot > lastComma) s = s.replace(/,/g, '')
-  else s = s.replace(',', '.')
+  else                          s = s.replace(',', '.')
   const n = parseFloat(s)
   if (isNaN(n)) return <span style={{ color: 'var(--fg-muted)' }}>{raw}</span>
-  return n >= 0
-    ? <span className="text-[var(--income)] font-bold">+{Math.abs(n).toFixed(2)} €</span>
-    : <span className="text-[var(--expense)] font-bold">−{Math.abs(n).toFixed(2)} €</span>
+  const abs = Math.abs(n)
+  // Gestisce zero negativo
+  const isNeg = n < 0 && abs > 0
+  return isNeg
+    ? <span className="text-[var(--expense)] font-bold">−{abs.toFixed(2)} €</span>
+    : <span className="text-[var(--income)] font-bold">+{abs.toFixed(2)} €</span>
 }
+
+// ── ConfidenceBadge — definito FUORI dal componente per evitare re-mount ──
+const ConfidenceBadge = memo(({ conf }: { conf: FieldConfidence }) => {
+  const cfg = {
+    certain:  { label: '✓ Certo',    cls: 'bg-[var(--income-dim)] text-[var(--income)]' },
+    probable: { label: '⚠ Verifica', cls: 'bg-[var(--warning-dim)] text-[var(--warning)]' },
+    uncertain:{ label: '⚠ Incerto',  cls: 'bg-[var(--expense-dim)] text-[var(--expense)]' },
+    none:     { label: '✗ Manuale',  cls: 'bg-[var(--bg-elevated)] text-[var(--fg-subtle)]' },
+  }[conf.level]
+  return (
+    <span className={cn('text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full', cfg.cls)}>
+      {cfg.label}
+    </span>
+  )
+})
+ConfidenceBadge.displayName = 'ConfidenceBadge'
+
+// ── ColSelect — definito FUORI dal componente ──────────────────
+interface ColSelectProps {
+  field:    keyof Mapping
+  label:    string
+  required?: boolean
+  conf:     FieldConfidence
+  value:    string
+  headers:  string[]
+  sample:   Record<string, string>
+  onChange: (field: keyof Mapping, value: string) => void
+}
+const ColSelect = memo(({
+  field, label, required = false, conf, value, headers, sample, onChange,
+}: ColSelectProps) => (
+  <div className="space-y-1.5">
+    <div className="flex items-center justify-between ml-1">
+      <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest">{label}</label>
+      <ConfidenceBadge conf={conf} />
+    </div>
+
+    {conf.level !== 'certain' && conf.reason && (
+      <p className="text-[9px] ml-1 leading-snug" style={{ color: 'var(--fg-subtle)' }}>
+        {conf.reason}
+      </p>
+    )}
+
+    <div className="relative">
+      <select
+        value={value}
+        onChange={e => onChange(field, e.target.value)}
+        className="w-full px-4 py-3 rounded-2xl border appearance-none cursor-pointer font-medium text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+        style={{
+          background: 'var(--bg-input)',
+          borderColor: (conf.level === 'uncertain' || (conf.level === 'none' && required)) ? 'var(--expense)' : 'var(--border-default)',
+          color: 'var(--fg-primary)',
+        }}
+      >
+        <option value="">{required ? '— Seleziona colonna —' : '— Nessuno (opzionale) —'}</option>
+        {headers.map((h, i) => {
+          const s = sample[h] ?? ''
+          const preview = s.length > 22 ? s.slice(0, 22) + '…' : s
+          return (
+            <option key={h} value={h}>
+              {colLetter(i)} — {h}{preview ? `  (es. "${preview}")` : ''}
+            </option>
+          )
+        })}
+      </select>
+      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--fg-subtle)]" />
+    </div>
+  </div>
+))
+ColSelect.displayName = 'ColSelect'
 
 // ── Componente principale ───────────────────────────────────────
 export default function ImportPage() {
@@ -196,6 +286,7 @@ export default function ImportPage() {
     counterpart:   { level: 'none', pct: 0, reason: '' },
     paymentMethod: { level: 'none', pct: 0, reason: '' },
   })
+  const [parseWarnings, setParseWarnings] = useState<string[]>([])
   const [accounts, setAccounts]     = useState<{id:string; name:string; type:string}[]>([])
   const [accountId, setAccountId]   = useState('')
   const [isImporting, setIsImporting] = useState(false)
@@ -242,12 +333,21 @@ export default function ImportPage() {
   const parseFile = (f: File) => {
     if (f.size > 10 * 1024 * 1024) { alert('File troppo grande. Max 10 MB.'); return }
     setFile(f)
+    setParseWarnings([])
     Papa.parse(f, {
-      header: true,
+      header:         true,
       skipEmptyLines: true,
       complete: (res) => {
         const rows = res.data as CSVRow[]
         if (rows.length === 0) { alert('Il CSV non contiene righe dati.'); return }
+
+        // Avvisa se PapaParse ha trovato errori (es. righe malformate)
+        if (res.errors.length > 0) {
+          const msgs = res.errors.slice(0, 3).map(e => `Riga ${e.row ?? '?'}: ${e.message}`)
+          if (res.errors.length > 3) msgs.push(`…e altri ${res.errors.length - 3} avvisi`)
+          setParseWarnings(msgs)
+        }
+
         const hdrs = res.meta.fields ?? []
         const { mapping: m, confidence: c } = autoDetect(hdrs, rows)
         setData(rows)
@@ -255,6 +355,9 @@ export default function ImportPage() {
         setMapping(m)
         setConfidence(c)
         setStep(2)
+      },
+      error: (err) => {
+        alert(`Errore di lettura del file: ${err.message}`)
       },
     })
   }
@@ -271,6 +374,10 @@ export default function ImportPage() {
     if (f) parseFile(f)
   }
 
+  const handleMappingChange = useCallback((field: keyof Mapping, value: string) => {
+    setMapping(prev => ({ ...prev, [field]: value }))
+  }, [])
+
   const handleImport = async () => {
     setIsImporting(true)
     try {
@@ -283,7 +390,7 @@ export default function ImportPage() {
       }))
       const res = await processImport(payload, { accountId, fileName: file?.name })
       setResult(res)
-      loadHistory()  // aggiorna storico dopo import
+      loadHistory()
     } catch (e: any) {
       alert(`Importazione fallita: ${e.message}`)
     } finally {
@@ -293,68 +400,17 @@ export default function ImportPage() {
 
   const reset = () => {
     setStep(1); setFile(null); setData([]); setHeaders([])
+    setParseWarnings([])
     setMapping({ date: '', amount: '', description: '', counterpart: '', paymentMethod: '' })
     setResult(null)
   }
 
-  // ── Confidence badge ────────────────────────────────────────
-  const ConfidenceBadge = ({ conf }: { conf: FieldConfidence }) => {
-    const cfg = {
-      certain:  { label: '✓ Certo',    cls: 'bg-[var(--income-dim)] text-[var(--income)]' },
-      probable: { label: '⚠ Verifica', cls: 'bg-[var(--warning-dim)] text-[var(--warning)]' },
-      uncertain:{ label: '⚠ Incerto',  cls: 'bg-[var(--expense-dim)] text-[var(--expense)]' },
-      none:     { label: '✗ Manuale',  cls: 'bg-[var(--bg-elevated)] text-[var(--fg-subtle)]' },
-    }[conf.level]
-    return (
-      <span className={cn('text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full', cfg.cls)}>
-        {cfg.label}
-      </span>
-    )
-  }
+  // Sample della prima riga per preview nei select
+  const firstRowSample = data[0] ?? {}
 
-  // ── Select colonna con riferimento Excel ────────────────────
-  const ColSelect = ({
-    field, label, required = false,
-  }: { field: keyof Mapping; label: string; required?: boolean }) => {
-    const conf = confidence[field]
-    return (
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between ml-1">
-          <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest">{label}</label>
-          <ConfidenceBadge conf={conf} />
-        </div>
-
-        {/* Motivazione inline (solo per campi non certi) */}
-        {conf.level !== 'certain' && conf.reason && (
-          <p className="text-[9px] ml-1 leading-snug" style={{ color: 'var(--fg-subtle)' }}>
-            {conf.reason}
-          </p>
-        )}
-
-        <div className="relative">
-          <select
-            value={mapping[field]}
-            onChange={e => setMapping(prev => ({ ...prev, [field]: e.target.value }))}
-            className="w-full px-4 py-3 rounded-2xl border appearance-none cursor-pointer font-medium text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-            style={{ background: 'var(--bg-input)', borderColor: conf.level === 'uncertain' || conf.level === 'none' && required ? 'var(--expense)' : 'var(--border-default)', color: 'var(--fg-primary)' }}
-          >
-            <option value="">{required ? '— Seleziona colonna —' : '— Nessuno (opzionale) —'}</option>
-            {headers.map((h, i) => {
-              const letter = colLetter(i)
-              const sample = data[0]?.[h] ?? ''
-              const preview = sample.length > 22 ? sample.slice(0, 22) + '…' : sample
-              return (
-                <option key={h} value={h}>
-                  {letter} — {h}{preview ? `  (es. "${preview}")` : ''}
-                </option>
-              )
-            })}
-          </select>
-          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--fg-subtle)]" />
-        </div>
-      </div>
-    )
-  }
+  // Conta campi obbligatori non certi
+  const mandatoryFields: (keyof Mapping)[] = ['date', 'amount', 'description']
+  const warningCount = mandatoryFields.filter(f => confidence[f].level !== 'certain').length
 
   // ── STEP 1: Upload ──────────────────────────────────────────
   const renderStep1 = () => (
@@ -385,7 +441,6 @@ export default function ImportPage() {
         <input type="file" accept=".csv,.txt" id="csv-upload" className="hidden" onChange={handleFileInput} />
       </div>
 
-      {/* Template */}
       <div className="flex items-center justify-between p-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
         <div className="flex items-center gap-3">
           <FileText size={18} className="text-[var(--fg-subtle)]" />
@@ -405,7 +460,6 @@ export default function ImportPage() {
         </a>
       </div>
 
-      {/* Banche compatibili */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {['Intesa Sanpaolo', 'UniCredit', 'Fineco', 'N26 · Revolut'].map(b => (
           <div key={b} className="p-3 rounded-xl border border-[var(--border-subtle)] text-center">
@@ -417,12 +471,19 @@ export default function ImportPage() {
   )
 
   // ── STEP 2: Mapping ─────────────────────────────────────────
-  // Conta campi obbligatori non certi
-  const mandatoryFields: (keyof Mapping)[] = ['date', 'amount', 'description']
-  const warningCount = mandatoryFields.filter(f => confidence[f].level !== 'certain').length
-
   const renderStep2 = () => (
     <div className="space-y-8 animate-in slide-in-from-right-6 duration-400">
+
+      {/* Avvisi PapaParse */}
+      {parseWarnings.length > 0 && (
+        <div className="flex items-start gap-3 p-3 rounded-2xl border" style={{ background: 'var(--warning-dim)', borderColor: 'rgba(251,191,36,0.3)' }}>
+          <AlertTriangle size={15} className="shrink-0 mt-0.5" style={{ color: 'var(--warning)' }} />
+          <div>
+            <p className="text-xs font-bold mb-1" style={{ color: 'var(--warning)' }}>Il file contiene righe con problemi di formato (ignorate)</p>
+            {parseWarnings.map((w, i) => <p key={i} className="text-[10px]" style={{ color: 'var(--fg-muted)' }}>{w}</p>)}
+          </div>
+        </div>
+      )}
 
       {/* Banner stato rilevamento */}
       <div className={cn(
@@ -451,52 +512,39 @@ export default function ImportPage() {
         </div>
       </div>
 
-      {/* Colonne obbligatorie */}
+      {/* Campi obbligatori */}
       <div>
-        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: 'var(--fg-subtle)' }}>
-          Campi Obbligatori
-        </p>
-        <p className="text-[10px] mb-4" style={{ color: 'var(--fg-subtle)' }}>
-          Le colonne usano i riferimenti Excel (A, B, C…) come nel foglio di calcolo
-        </p>
+        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: 'var(--fg-subtle)' }}>Campi Obbligatori</p>
+        <p className="text-[10px] mb-4" style={{ color: 'var(--fg-subtle)' }}>Le colonne usano i riferimenti Excel (A, B, C…)</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <ColSelect field="date"        label="Data *"         required />
-          <ColSelect field="amount"      label="Importo *"      required />
-          <ColSelect field="description" label="Descrizione *"  required />
+          <ColSelect field="date"        label="Data *"        required conf={confidence.date}        value={mapping.date}        headers={headers} sample={firstRowSample} onChange={handleMappingChange} />
+          <ColSelect field="amount"      label="Importo *"     required conf={confidence.amount}      value={mapping.amount}      headers={headers} sample={firstRowSample} onChange={handleMappingChange} />
+          <ColSelect field="description" label="Descrizione *" required conf={confidence.description} value={mapping.description} headers={headers} sample={firstRowSample} onChange={handleMappingChange} />
         </div>
       </div>
 
-      {/* Colonne opzionali */}
+      {/* Campi opzionali */}
       <div>
-        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: 'var(--fg-subtle)' }}>
-          Campi Opzionali
-        </p>
-        <p className="text-[10px] mb-4" style={{ color: 'var(--fg-subtle)' }}>
-          Seleziona se presenti nel file
-        </p>
+        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: 'var(--fg-subtle)' }}>Campi Opzionali</p>
+        <p className="text-[10px] mb-4" style={{ color: 'var(--fg-subtle)' }}>Seleziona se presenti nel file</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ColSelect field="counterpart"   label="Controparte" />
-          <ColSelect field="paymentMethod" label="Metodo di Pagamento" />
+          <ColSelect field="counterpart"   label="Controparte"          conf={confidence.counterpart}   value={mapping.counterpart}   headers={headers} sample={firstRowSample} onChange={handleMappingChange} />
+          <ColSelect field="paymentMethod" label="Metodo di Pagamento"  conf={confidence.paymentMethod} value={mapping.paymentMethod} headers={headers} sample={firstRowSample} onChange={handleMappingChange} />
         </div>
-
-        {/* Nota metodo pagamento */}
         <div className="mt-3 flex items-start gap-2 p-3 rounded-xl" style={{ background: 'var(--bg-elevated)' }}>
           <Info size={13} className="shrink-0 mt-0.5" style={{ color: 'var(--fg-subtle)' }} />
           <p className="text-[10px] leading-relaxed" style={{ color: 'var(--fg-muted)' }}>
             <span className="font-bold">Metodo di pagamento:</span>{' '}
-            uno stesso estratto conto può contenere carta, bonifico, contanti e PayPal nella stessa lista.
-            Se la tua banca esporta il metodo come colonna, mappalo qui e sarà assegnato riga per riga.
-            Altrimenti il campo resterà vuoto e potrai compilarlo in revisione, transazione per transazione.
-            Nessun metodo viene mai applicato globalmente all'intero import.
+            uno stesso estratto conto può contenere carta, bonifico, contanti e PayPal.
+            Se la banca esporta il metodo come colonna, mappalo qui e sarà assegnato riga per riga.
+            Altrimenti resterà vuoto e potrai compilarlo in revisione transazione per transazione.
           </p>
         </div>
       </div>
 
       {/* Selezione conto */}
       <div>
-        <p className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: 'var(--fg-subtle)' }}>
-          Importa nel Conto *
-        </p>
+        <p className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: 'var(--fg-subtle)' }}>Importa nel Conto *</p>
         {accounts.length === 0
           ? <p className="text-sm" style={{ color: 'var(--fg-muted)' }}>Nessun conto trovato. Crea prima un conto nella sezione Conti.</p>
           : (
@@ -532,11 +580,7 @@ export default function ImportPage() {
       </div>
 
       <div className="flex justify-between pt-2">
-        <button
-          onClick={() => setStep(1)}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold"
-          style={{ background: 'var(--bg-elevated)', color: 'var(--fg-muted)' }}
-        >
+        <button onClick={() => setStep(1)} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold" style={{ background: 'var(--bg-elevated)', color: 'var(--fg-muted)' }}>
           <ArrowLeft size={15} /> Indietro
         </button>
         <button
@@ -553,18 +597,19 @@ export default function ImportPage() {
 
   // ── STEP 3: Preview + Importa ───────────────────────────────
   const renderStep3 = () => {
-    const preview   = data.slice(0, 15)
-    const selAcc    = accounts.find(a => a.id === accountId)
-    const hasCp     = !!mapping.counterpart
-    const hasPM     = !!mapping.paymentMethod
-    const pmColLabel = hasPM ? `Da colonna ${colLetter(headers.indexOf(mapping.paymentMethod))} (per riga)` : 'Vuoto — da assegnare in revisione'
+    const preview    = data.slice(0, 15)
+    const selAcc     = accounts.find(a => a.id === accountId)
+    const hasCp      = !!mapping.counterpart
+    const hasPM      = !!mapping.paymentMethod
+    const pmColLabel = hasPM
+      ? `Da colonna ${colLetter(headers.indexOf(mapping.paymentMethod))} (per riga)`
+      : 'Vuoto — da assegnare in revisione'
 
     return (
       <div className="space-y-6 animate-in slide-in-from-right-6 duration-400">
-        {/* Riepilogo */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Righe totali',      val: data.length.toString() },
+            { label: 'Righe totali',       val: data.length.toString() },
             { label: 'Conto destinazione', val: selAcc?.name ?? '—' },
             { label: 'Metodo pagamento',   val: pmColLabel },
             { label: 'Stato iniziale',     val: 'STAGED (da verificare)' },
@@ -576,7 +621,6 @@ export default function ImportPage() {
           ))}
         </div>
 
-        {/* Tabella preview */}
         <div className="rounded-2xl overflow-hidden border" style={{ borderColor: 'var(--border-subtle)' }}>
           <div className="overflow-x-auto max-h-72 overflow-y-auto custom-scrollbar">
             <table className="w-full text-left text-sm">
@@ -591,7 +635,7 @@ export default function ImportPage() {
                 {preview.map((row, i) => (
                   <tr key={i} className="border-t hover:bg-[var(--bg-elevated)]/50 transition-colors" style={{ borderColor: 'var(--border-subtle)' }}>
                     <td className="px-4 py-3 text-[10px] font-mono" style={{ color: 'var(--fg-subtle)' }}>{i + 1}</td>
-                    <td className="px-4 py-3 font-medium whitespace-nowrap" style={{ color: 'var(--fg-muted)' }}>{row[mapping.date] ?? '—'}</td>
+                    <td className="px-4 py-3 font-medium whitespace-nowrap text-xs" style={{ color: 'var(--fg-muted)' }}>{row[mapping.date] ?? '—'}</td>
                     <td className="px-4 py-3 font-medium max-w-[200px] truncate" style={{ color: 'var(--fg-primary)' }}>{row[mapping.description] ?? '—'}</td>
                     {hasCp && (
                       <td className="px-4 py-3 text-xs max-w-[120px] truncate" style={{ color: 'var(--fg-muted)' }}>
@@ -614,12 +658,7 @@ export default function ImportPage() {
         </div>
 
         <div className="flex justify-between pt-2">
-          <button
-            onClick={() => setStep(2)}
-            disabled={isImporting}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold"
-            style={{ background: 'var(--bg-elevated)', color: 'var(--fg-muted)' }}
-          >
+          <button onClick={() => setStep(2)} disabled={isImporting} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold" style={{ background: 'var(--bg-elevated)', color: 'var(--fg-muted)' }}>
             <ArrowLeft size={15} /> Indietro
           </button>
           <button
@@ -645,53 +684,38 @@ export default function ImportPage() {
         style={{ background: 'var(--income-dim)', boxShadow: '0 0 40px var(--glow-accent)' }}>
         <CheckCircle2 size={36} style={{ color: 'var(--income)' }} />
       </div>
-      <h2 className="text-2xl font-display font-black mb-2" style={{ color: 'var(--fg-primary)' }}>
-        Importazione Completata
-      </h2>
+      <h2 className="text-2xl font-display font-black mb-2" style={{ color: 'var(--fg-primary)' }}>Importazione Completata</h2>
       <p className="text-sm mb-8" style={{ color: 'var(--fg-muted)' }}>
-        Le transazioni sono in stato STAGED (da verificare) — confermale nella sezione Transazioni.
+        Le transazioni sono in stato STAGED — confermale nella sezione Transazioni.
       </p>
-
       <div className="max-w-xs mx-auto space-y-2 mb-8">
-        <div className="flex justify-between items-center p-3 rounded-xl border"
-          style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-subtle)' }}>
+        <div className="flex justify-between items-center p-3 rounded-xl border" style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-subtle)' }}>
           <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--fg-muted)' }}>Importate</span>
           <span className="font-mono font-bold" style={{ color: 'var(--income)' }}>{result?.importedCount}</span>
         </div>
-        <div className="flex justify-between items-center p-3 rounded-xl border"
-          style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-subtle)' }}>
+        <div className="flex justify-between items-center p-3 rounded-xl border" style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-subtle)' }}>
           <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--fg-muted)' }}>Duplicati saltati</span>
           <span className="font-mono font-bold" style={{ color: 'var(--warning)' }}>{result?.duplicateCount}</span>
         </div>
         {result?.errors && result.errors.length > 0 && (
-          <div className="p-3 rounded-xl border text-left"
-            style={{ background: 'var(--expense-dim)', borderColor: 'var(--expense)' }}>
+          <div className="p-3 rounded-xl border text-left" style={{ background: 'var(--expense-dim)', borderColor: 'var(--expense)' }}>
             <p className="text-xs font-bold mb-1 flex items-center gap-1" style={{ color: 'var(--expense)' }}>
               <AlertTriangle size={12} /> {result.errors.length} righe con errori
             </p>
-            {result.errors.slice(0, 3).map((e, i) => (
+            {result.errors.slice(0, 5).map((e, i) => (
               <p key={i} className="text-[10px]" style={{ color: 'var(--fg-muted)' }}>{e}</p>
             ))}
-            {result.errors.length > 3 && (
-              <p className="text-[10px]" style={{ color: 'var(--fg-subtle)' }}>+{result.errors.length - 3} altri…</p>
+            {result.errors.length > 5 && (
+              <p className="text-[10px]" style={{ color: 'var(--fg-subtle)' }}>+{result.errors.length - 5} altri…</p>
             )}
           </div>
         )}
       </div>
-
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
-        <button
-          onClick={reset}
-          className="px-6 py-3 rounded-xl font-bold text-sm border transition-all"
-          style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)', color: 'var(--fg-primary)' }}
-        >
+        <button onClick={reset} className="px-6 py-3 rounded-xl font-bold text-sm border transition-all" style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)', color: 'var(--fg-primary)' }}>
           Importa un altro file
         </button>
-        <a
-          href="/app/transactions"
-          className="px-6 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_20px_var(--glow-accent)]"
-          style={{ background: 'var(--accent)', color: 'var(--accent-on)' }}
-        >
+        <a href="/app/transactions" className="px-6 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_20px_var(--glow-accent)]" style={{ background: 'var(--accent)', color: 'var(--accent-on)' }}>
           Vai alle Transazioni <ArrowRight size={15} />
         </a>
       </div>
@@ -727,39 +751,24 @@ export default function ImportPage() {
               <div className="min-w-0">
                 <p className="text-sm font-bold truncate" style={{ color: 'var(--fg-primary)' }}>{batch.fileName}</p>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--fg-subtle)' }}>
-                    {batch.accountName}
-                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--fg-subtle)' }}>{batch.accountName}</span>
+                  <span className="w-1 h-1 rounded-full" style={{ background: 'var(--border-strong)' }} />
+                  <span className="text-[10px]" style={{ color: 'var(--fg-subtle)' }}>{batch.rowCount} righe</span>
                   <span className="w-1 h-1 rounded-full" style={{ background: 'var(--border-strong)' }} />
                   <span className="text-[10px]" style={{ color: 'var(--fg-subtle)' }}>
-                    {batch.rowCount} righe
-                  </span>
-                  <span className="w-1 h-1 rounded-full" style={{ background: 'var(--border-strong)' }} />
-                  <span className="text-[10px]" style={{ color: 'var(--fg-subtle)' }}>
-                    {new Date(batch.createdAt).toLocaleString('it-IT', {
-                      day: '2-digit', month: '2-digit', year: 'numeric',
-                      hour: '2-digit', minute: '2-digit'
-                    })}
+                    {new Date(batch.createdAt).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
               </div>
             </div>
-
             <button
               onClick={() => handleDeleteBatch(batch.id, batch.fileName)}
               disabled={deletingBatch === batch.id}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all disabled:opacity-50 shrink-0 ml-3"
-              style={{
-                background: 'var(--expense-dim)',
-                borderColor: 'rgba(var(--expense-rgb, 248,113,113),0.2)',
-                color: 'var(--expense)'
-              }}
+              style={{ background: 'var(--expense-dim)', borderColor: 'transparent', color: 'var(--expense)' }}
               title="Elimina import (le transazioni non confermate verranno eliminate)"
             >
-              {deletingBatch === batch.id
-                ? <Loader2 size={13} className="animate-spin" />
-                : <Trash2 size={13} />
-              }
+              {deletingBatch === batch.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
               <span className="hidden sm:inline">Elimina</span>
             </button>
           </div>
@@ -773,7 +782,6 @@ export default function ImportPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-400">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-display font-extrabold tracking-tight" style={{ color: 'var(--fg-primary)' }}>
@@ -784,21 +792,17 @@ export default function ImportPage() {
           </p>
         </div>
 
-        {/* Stepper (solo in tab import, non in storico) */}
         {activeTab === 'import' && !result && (
           <div className="flex items-center gap-1.5 shrink-0">
             {STEPS.map((label, i) => {
-              const s = i + 1
+              const s      = i + 1
               const done   = step > s
               const active = step === s
               return (
                 <div key={s} className="flex items-center">
                   <div className="flex items-center gap-1.5">
                     <div
-                      className={cn(
-                        "w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black transition-all",
-                        active ? "scale-110 shadow-[0_0_12px_var(--glow-accent)]" : ""
-                      )}
+                      className={cn("w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black transition-all", active ? "scale-110 shadow-[0_0_12px_var(--glow-accent)]" : "")}
                       style={{
                         background: done ? 'var(--income-dim)' : active ? 'var(--accent)' : 'var(--bg-elevated)',
                         color: done ? 'var(--income)' : active ? 'var(--accent-on)' : 'var(--fg-subtle)',
@@ -806,16 +810,9 @@ export default function ImportPage() {
                     >
                       {done ? <CheckCircle2 size={14} /> : s}
                     </div>
-                    <span
-                      className="text-[10px] font-bold hidden sm:block"
-                      style={{ color: active ? 'var(--fg-primary)' : 'var(--fg-subtle)' }}
-                    >
-                      {label}
-                    </span>
+                    <span className="text-[10px] font-bold hidden sm:block" style={{ color: active ? 'var(--fg-primary)' : 'var(--fg-subtle)' }}>{label}</span>
                   </div>
-                  {s < 3 && (
-                    <div className="w-4 h-px mx-1.5 rounded" style={{ background: done ? 'var(--income)' : 'var(--border-subtle)' }} />
-                  )}
+                  {s < 3 && <div className="w-4 h-px mx-1.5 rounded" style={{ background: done ? 'var(--income)' : 'var(--border-subtle)' }} />}
                 </div>
               )
             })}
@@ -832,12 +829,7 @@ export default function ImportPage() {
           <button
             key={id}
             onClick={() => setActiveTab(id)}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all",
-              activeTab === id
-                ? "shadow-sm"
-                : "hover:bg-[var(--bg-surface)]"
-            )}
+            className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all", activeTab === id ? "shadow-sm" : "hover:bg-[var(--bg-surface)]")}
             style={{
               background: activeTab === id ? 'var(--bg-surface)' : 'transparent',
               color: activeTab === id ? 'var(--fg-primary)' : 'var(--fg-muted)',
@@ -849,11 +841,7 @@ export default function ImportPage() {
         ))}
       </div>
 
-      {/* Card principale */}
-      <div
-        className="p-6 md:p-10 rounded-[2rem] border shadow-xl"
-        style={{ background: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
-      >
+      <div className="p-6 md:p-10 rounded-[2rem] border shadow-xl" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}>
         {activeTab === 'history'
           ? renderHistory()
           : result

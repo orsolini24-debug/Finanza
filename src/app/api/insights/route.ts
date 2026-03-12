@@ -275,7 +275,7 @@ BENCHMARK DI RIFERIMENTO (usali nel testo):
     })
 
   } catch (error) {
-    Sentry.captureException(error)
+    // Sentry.captureException(error)
     console.error('AI Insights Error:', error)
     return NextResponse.json({ insights: [] }, { status: 500 })
   }

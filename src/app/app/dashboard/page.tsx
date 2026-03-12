@@ -17,12 +17,10 @@ import { Amount } from "@/components/ui/Amount";
 import nextDynamic from 'next/dynamic';
 
 const AIInsights = nextDynamic(() => import("@/components/dashboard/AIInsights"), { 
-  ssr: false,
   loading: () => <div className="h-72 skeleton rounded-[3rem] animate-pulse bg-[var(--bg-elevated)]" />
 });
 
 const ChartCarousel = nextDynamic(() => import("@/components/dashboard/ChartClient").then(mod => mod.ChartCarousel), {
-  ssr: false,
   loading: () => <div className="h-[400px] skeleton rounded-[3rem] animate-pulse bg-[var(--bg-elevated)]" />
 });
 

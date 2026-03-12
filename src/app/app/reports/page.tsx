@@ -4,16 +4,8 @@ import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { BarChart3, TrendingUp, TrendingDown, Target, PieChart } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import dynamic from 'next/dynamic';
-
-const ReportsClient = dynamic(() => import("@/components/reports/ReportsClient").then(mod => mod.ReportsClient), {
-  loading: () => <div className="h-96 skeleton rounded-[3rem] animate-pulse bg-[var(--bg-elevated)]" />
-});
-
-const CashFlowChart = dynamic(() => import("@/components/reports/CashFlowChart"), {
-  ssr: false,
-  loading: () => <div className="h-96 skeleton rounded-[3rem] animate-pulse bg-[var(--bg-elevated)]" />
-});
+import { ReportsClient } from "@/components/reports/ReportsClient";
+import CashFlowChart from "@/components/reports/CashFlowChart";
 
 export default async function ReportsPage() {
   const session = await getServerSession(authOptions);

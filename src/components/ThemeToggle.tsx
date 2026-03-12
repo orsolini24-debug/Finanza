@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Palette, Check, Moon, Sun, MonitorSmartphone } from 'lucide-react'
+import { Moon, Sun, MonitorSmartphone } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type BaseTheme = 'obsidian' | 'sapphire' | 'aurora' | 'sunset' | 'forest' | 'rosegold' | 'cyberpunk' | 'cloud' | 'ocean' | 'mono'
@@ -44,9 +44,31 @@ const BASE_THEMES: BaseThemeDef[] = [
 ]
 
 export default function ThemeToggle() {
-  const [baseTheme, setBaseTheme] = useState<BaseTheme>('obsidian')
-  const [variant, setVariant]     = useState<Variant>('dark')
-  const [isAuto, setIsAuto]       = useState(false)
+  const [baseTheme, setBaseTheme] = useState<BaseTheme>(() => {
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem('theme') ?? 'obsidian-dark'
+      const resolved = LEGACY_MAP[raw] ?? raw
+      if (resolved === 'auto') return 'obsidian'
+      return (resolved.split('-')[0] as BaseTheme) || 'obsidian'
+    }
+    return 'obsidian'
+  })
+  const [variant, setVariant] = useState<Variant>(() => {
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem('theme') ?? 'obsidian-dark'
+      const resolved = LEGACY_MAP[raw] ?? raw
+      if (resolved === 'auto') return 'dark'
+      return (resolved.split('-')[1] as Variant) || 'dark'
+    }
+    return 'dark'
+  })
+  const [isAuto, setIsAuto] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem('theme') ?? 'obsidian-dark'
+      return (LEGACY_MAP[raw] ?? raw) === 'auto'
+    }
+    return false
+  })
   
   const [open, setOpen]       = useState(false)
   const [pos, setPos]         = useState({ top: 0, right: 0 })
@@ -57,21 +79,7 @@ export default function ThemeToggle() {
     setMounted(true)
     const raw = localStorage.getItem('theme') ?? 'obsidian-dark'
     const resolved = LEGACY_MAP[raw] ?? raw
-    
-    if (resolved === 'auto') {
-      setIsAuto(true)
-      document.documentElement.setAttribute('data-theme', 'auto')
-    } else {
-      const [b, v] = resolved.split('-') as [BaseTheme, Variant]
-      if (BASE_THEMES.find(t => t.id === b)) {
-        setBaseTheme(b)
-        setVariant(v || 'dark')
-        document.documentElement.setAttribute('data-theme', resolved)
-      } else {
-        // Fallback
-        document.documentElement.setAttribute('data-theme', 'obsidian-dark')
-      }
-    }
+    document.documentElement.setAttribute('data-theme', resolved)
   }, [])
 
   const handleOpen = () => {

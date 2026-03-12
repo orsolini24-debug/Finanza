@@ -233,7 +233,13 @@ export default function GoalsManager({ goals, accounts }: GoalsManagerProps) {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest ml-1">Data Fine</label>
-                  <input name="endDate" type="date" defaultValue={editingGoal ? new Date(editingGoal.endDate).toISOString().split('T')[0] : new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0]} required className="w-full px-4 py-3 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl text-[var(--fg-primary)]" />
+                  <input 
+                    name="endDate" 
+                    type="date" 
+                    defaultValue={editingGoal ? new Date(editingGoal.endDate).toISOString().split('T')[0] : new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]} 
+                    required 
+                    className="w-full px-4 py-3 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl text-[var(--fg-primary)]" 
+                  />
                 </div>
               </div>
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Sparkles, RefreshCw, X, ArrowRight, Lightbulb, TrendingUp, AlertTriangle } from 'lucide-react'
+import { Sparkles, RefreshCw, X, ArrowRight, Lightbulb, TrendingUp } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 

@@ -10,13 +10,17 @@ interface PrivacyContextType {
 const PrivacyContext = createContext<PrivacyContextType | undefined>(undefined)
 
 export function PrivacyProvider({ children }: { children: React.ReactNode }) {
-  const [isPrivate, setIsPrivate] = useState(false)
+  const [isPrivate, setIsPrivate] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('privacy_mode') === 'true'
+    }
+    return false
+  })
 
-  // Carica preferenza dal localStorage
+  // Sincronizza preferenza nel localStorage quando cambia
   useEffect(() => {
-    const saved = localStorage.getItem('privacy_mode')
-    if (saved === 'true') setIsPrivate(true)
-  }, [])
+    localStorage.setItem('privacy_mode', String(isPrivate))
+  }, [isPrivate])
 
   const togglePrivacy = () => {
     setIsPrivate(prev => {

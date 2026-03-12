@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition, useMemo, useEffect } from 'react'
-import { Transaction, Category, Account, TxStatus } from '@prisma/client'
+import { Transaction, Category, Account } from '@prisma/client'
 import { Search, Filter, Check, X, Trash2, Tags, ChevronDown, CheckCircle2, AlertCircle, Edit2, Loader2, Download, Sparkles, Clock } from 'lucide-react'
 import { confirmTransactions, deleteTransactions, setTransactionCategory } from '@/app/actions/transactions'
 import { aiSuggestCategories } from '@/app/actions/ai-categorize'

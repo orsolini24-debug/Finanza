@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
-import { TrendingUp, TrendingDown, Wallet, Target, CalendarClock, PiggyBank, ClipboardCheck, HelpCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, CalendarClock, PiggyBank, ClipboardCheck, HelpCircle } from "lucide-react";
 import { formatCurrency, cn } from "@/lib/utils";
 import { getCurrentMonth, getPeriodRange } from "@/lib/period";
 import { processOverdueRecurring } from "@/lib/process-recurring";

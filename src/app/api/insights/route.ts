@@ -7,6 +7,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import prisma from "@/lib/prisma"
 import { getPeriodRange } from "@/lib/period"
 import Groq from 'groq-sdk'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
 export async function POST(req: NextRequest) {
   try {
@@ -203,29 +204,45 @@ BENCHMARK DI RIFERIMENTO (usali nel testo):
 - Rendimento storico azionario globale: 7% annuo reale su orizzonti 10+ anni
 - Inflazione media europea: circa 2-3% annuo`
 
-    if (!process.env.GROQ_API_KEY) {
+    if (!process.env.GOOGLE_AI_API_KEY && !process.env.GROQ_API_KEY) {
       return NextResponse.json({
         insights: [{
           type: 'info',
           icon: '🔑',
           title: 'AI non configurata',
-          message: 'Configura GROQ_API_KEY nelle variabili d\'ambiente.',
-          detail: 'Per attivare l\'analisi AI, aggiungi la variabile GROQ_API_KEY al tuo file .env.local.',
-          action: 'Aggiungi GROQ_API_KEY=... al file .env.local'
+          message: 'Configura GOOGLE_AI_API_KEY o GROQ_API_KEY nelle variabili d\'ambiente.',
+          detail: 'Per attivare l\'analisi AI, aggiungi la variabile GOOGLE_AI_API_KEY al tuo file .env.local.',
+          action: 'Aggiungi GOOGLE_AI_API_KEY=... al file .env.local'
         }]
       })
     }
 
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      messages: [{ role: "system", content: systemPrompt }],
-      temperature: 0.25,
-      max_tokens: 3000,
-      response_format: { type: "json_object" }
-    })
+    let raw: string
 
-    const raw = completion.choices[0]?.message?.content || '{}'
+    if (process.env.GOOGLE_AI_API_KEY) {
+      const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY)
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-2.0-flash',
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.25,
+          maxOutputTokens: 3000,
+        }
+      })
+      const result = await model.generateContent(systemPrompt)
+      raw = result.response.text()
+    } else {
+      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+      const completion = await groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'system', content: systemPrompt }],
+        temperature: 0.25,
+        max_tokens: 3000,
+        response_format: { type: 'json_object' }
+      })
+      raw = completion.choices[0]?.message?.content || '{}'
+    }
+
     const result = JSON.parse(raw)
 
     return NextResponse.json(result, {

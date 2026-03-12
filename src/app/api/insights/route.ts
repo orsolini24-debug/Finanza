@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 
+import * as Sentry from '@sentry/nextjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
@@ -232,6 +233,7 @@ BENCHMARK DI RIFERIMENTO (usali nel testo):
     })
 
   } catch (error) {
+    Sentry.captureException(error)
     console.error('AI Insights Error:', error)
     return NextResponse.json({ insights: [] }, { status: 500 })
   }

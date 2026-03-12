@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import { cn, formatCurrency } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 import TransactionEditModal from './transactions/TransactionEditModal'
+import QuickCategoryModal from './categories/QuickCategoryModal'
 
 type TransactionWithRelations = Transaction & {
   category: Category | null;
@@ -26,6 +27,7 @@ interface TransactionsTableProps {
 export default function TransactionsTable({ transactions, categories, accounts, defaultStatus = 'ALL' }: TransactionsTableProps) {
   const [selectedTx, setSelectedTx] = useState<string[]>([])
   const [editingTx, setEditingTx] = useState<TransactionWithRelations | null>(null)
+  const [showQuickCategoryModal, setShowQuickCategoryModal] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [aiSuggestions, setAiSuggestions] = useState<{ transactionId: string; categoryId: string | null; categoryName: string | null; confidence: number; accepted: boolean }[]>([])
@@ -50,7 +52,6 @@ export default function TransactionsTable({ transactions, categories, accounts, 
   const filtered = useMemo(() => {
     return transactions.filter(tx => {
       if (search && !tx.description.toLowerCase().includes(search.toLowerCase())) return false
-      // Problem #6 - Fix filter logic: ensure status matches exactly
       if (filterStatus !== 'ALL' && tx.status !== filterStatus) return false
       if (filterType === 'income' && Number(tx.amount) <= 0) return false
       if (filterType === 'expense' && Number(tx.amount) >= 0) return false
@@ -59,20 +60,15 @@ export default function TransactionsTable({ transactions, categories, accounts, 
     })
   }, [transactions, search, filterStatus, filterType, filterCategoryId])
 
-  // Grouping by date
   const groupedTransactions = useMemo(() => {
     const groups = new Map<string, { txs: TransactionWithRelations[], net: number }>()
-    
     filtered.forEach(tx => {
       const dateKey = tx.date.toISOString().split('T')[0]
-      if (!groups.has(dateKey)) {
-        groups.set(dateKey, { txs: [], net: 0 })
-      }
+      if (!groups.has(dateKey)) groups.set(dateKey, { txs: [], net: 0 })
       const group = groups.get(dateKey)!
       group.txs.push(tx)
       group.net += Number(tx.amount)
     })
-
     return Array.from(groups.entries()).sort((a, b) => b[0].localeCompare(a[0]))
   }, [filtered])
 
@@ -89,7 +85,7 @@ export default function TransactionsTable({ transactions, categories, accounts, 
   }
 
   const handleConfirm = () => {
-    if (isPending) return; // Problem #3 - guard
+    if (isPending) return
     startTransition(async () => {
       try {
         await confirmTransactions(selectedTx)
@@ -102,8 +98,8 @@ export default function TransactionsTable({ transactions, categories, accounts, 
   }
 
   const handleDelete = () => {
-    if (isPending) return;
-    if (confirm(`Eliminare ${selectedTx.length} transazioni? L'azione non può essere annullata.`)) {
+    if (isPending) return
+    if (confirm(`Eliminare ${selectedTx.length} transazioni?`)) {
       startTransition(async () => {
         try {
           await deleteTransactions(selectedTx)
@@ -141,14 +137,20 @@ export default function TransactionsTable({ transactions, categories, accounts, 
   }
 
   const handleChangeCategory = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value;
-    if (val === 'Cambia Categoria' || isPending) return;
+    const val = e.target.value
+    if (val === 'Cambia Categoria' || isPending) return
     
+    if (val === 'new_category') {
+      setShowQuickCategoryModal(true)
+      e.target.value = 'Cambia Categoria'
+      return
+    }
+
     const categoryId = val === 'none' ? null : val
     startTransition(async () => {
       try {
         await setTransactionCategory(selectedTx, categoryId)
-        setSelectedTx([])
+        // Keep selectedTx to allow immediate confirmation
         router.refresh()
       } catch (e: any) {
         alert(e.message)
@@ -158,19 +160,9 @@ export default function TransactionsTable({ transactions, categories, accounts, 
 
   const handleAiCategorize = async () => {
     if (isAiLoading || isPending) return
-    
-    // Se non ci sono selezionati, prendi tutti i filtrati che sono STAGED
     const idsToProcess = selectedTx.length > 0 ? selectedTx : filtered.filter(t => t.status === 'STAGED').map(t => t.id)
-    
-    if (idsToProcess.length === 0) {
-      alert("Nessuna transazione in attesa da categorizzare.")
-      return
-    }
-
-    if (idsToProcess.length > 20) {
-      alert("Seleziona massimo 20 transazioni alla volta per la categorizzazione AI.")
-      return
-    }
+    if (idsToProcess.length === 0) return alert("Nessuna transazione in attesa.")
+    if (idsToProcess.length > 50) return alert("Seleziona massimo 50 transazioni alla volta.")
 
     setIsAiLoading(true)
     try {
@@ -186,14 +178,10 @@ export default function TransactionsTable({ transactions, categories, accounts, 
 
   const handleAcceptAiSuggestions = () => {
     const toApply = aiSuggestions.filter(s => s.accepted && s.categoryId)
-    if (toApply.length === 0) {
-      setShowAiPanel(false)
-      return
-    }
+    if (toApply.length === 0) return setShowAiPanel(false)
 
     startTransition(async () => {
       try {
-        // Raggruppa per categoria per fare meno chiamate
         const byCategory = toApply.reduce((acc, s) => {
           if (!acc[s.categoryId!]) acc[s.categoryId!] = []
           acc[s.categoryId!].push(s.transactionId)
@@ -203,10 +191,9 @@ export default function TransactionsTable({ transactions, categories, accounts, 
         for (const [catId, ids] of Object.entries(byCategory)) {
           await setTransactionCategory(ids, catId)
         }
-        
         setShowAiPanel(false)
         setAiSuggestions([])
-        setSelectedTx([])
+        // Keep selection if they were selected before
         router.refresh()
       } catch (e: any) {
         alert(e.message)
@@ -225,10 +212,7 @@ export default function TransactionsTable({ transactions, categories, accounts, 
       Stato: tx.status === 'CONFIRMED' ? 'Confermata' : 'In attesa',
     }))
     const headers = ['Data', 'Descrizione', 'Importo', 'Categoria', 'Stato']
-    const csv = [
-      headers.join(','),
-      ...rows.map(r => headers.map(h => `"${(r as any)[h]}"`).join(','))
-    ].join('\n')
+    const csv = [headers.join(','), ...rows.map(r => headers.map(h => `"${(r as any)[h]}"`).join(','))].join('\n')
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -240,27 +224,25 @@ export default function TransactionsTable({ transactions, categories, accounts, 
 
   return (
     <div className="space-y-6 pb-24">
-
       {/* Tab STAGED / CONFIRMED */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
         <div className="flex gap-1 p-1 rounded-2xl" style={{ background: 'var(--bg-elevated)' }}>
-          {([
-            { id: 'ALL'       as const, label: 'Tutte',          count: transactions.length, icon: undefined as any },
-            { id: 'STAGED'    as const, label: 'Da confermare',  count: stagedCount,         icon: Clock },
-            { id: 'CONFIRMED' as const, label: 'Registrate',     count: confirmedCount,      icon: CheckCircle2 },
-          ]).map(({ id, label, count, icon: Icon }) => (
+          {[
+            { id: 'ALL' as const, label: 'Tutte', count: transactions.length, icon: undefined as any },
+            { id: 'STAGED' as const, label: 'Da confermare', count: stagedCount, icon: Clock },
+            { id: 'CONFIRMED' as const, label: 'Registrate', count: confirmedCount, icon: CheckCircle2 },
+          ].map(({ id, label, count, icon: Icon }) => (
             <button
               key={id}
               onClick={() => { setFilterStatus(id); setSelectedTx([]) }}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all",
-                filterStatus === id ? "shadow-sm" : "hover:bg-[var(--bg-surface)]"
+                filterStatus === id ? "shadow-sm bg-[var(--bg-surface)]" : "hover:bg-[var(--bg-surface)] text-[var(--fg-muted)]"
               )}
               style={{
-                background: filterStatus === id ? 'var(--bg-surface)' : 'transparent',
                 color: filterStatus === id
                   ? id === 'STAGED' ? 'var(--warning)' : id === 'CONFIRMED' ? 'var(--income)' : 'var(--fg-primary)'
-                  : 'var(--fg-muted)',
+                  : undefined,
               }}
             >
               {Icon && <Icon size={12} />}
@@ -280,13 +262,10 @@ export default function TransactionsTable({ transactions, categories, accounts, 
             </button>
           ))}
         </div>
-
-        {/* Banner informativo STAGED */}
         {filterStatus === 'STAGED' && stagedCount > 0 && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium"
-            style={{ background: 'var(--warning-dim)', color: 'var(--warning)' }}>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium bg-[var(--warning-dim)] text-[var(--warning)]">
             <AlertCircle size={13} />
-            {stagedCount} transazion{stagedCount === 1 ? 'e' : 'i'} in attesa di conferma — selezionale e usa "Conferma"
+            {stagedCount} transazion{stagedCount === 1 ? 'e' : 'i'} in attesa — selezionale e usa "Conferma"
           </div>
         )}
       </div>
@@ -296,42 +275,17 @@ export default function TransactionsTable({ transactions, categories, accounts, 
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <div className="relative flex-1 md:flex-none group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--fg-subtle)] w-4 h-4 group-focus-within:text-[var(--accent)] transition-colors" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Cerca descrizione..."
-              className="pl-10 pr-4 py-2.5 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--accent)] focus:border-[var(--accent)] text-sm w-full md:w-80 transition-all placeholder:text-[var(--fg-subtle)]"
-            />
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca descrizione..." className="pl-10 pr-4 py-2.5 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-sm w-full md:w-80 transition-all" />
           </div>
-          <button
-            onClick={() => setShowFilter(f => !f)}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all text-sm font-semibold",
-              showFilter || activeFiltersCount > 0 
-                ? "bg-[var(--accent-dim)] border-[var(--accent)] text-[var(--accent)]" 
-                : "bg-[var(--bg-surface)] border-[var(--border-default)] text-[var(--fg-muted)] hover:bg-[var(--bg-elevated)]"
-            )}
-          >
-            <Filter className="w-4 h-4" />
-            <span>Filtra{activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ''}</span>
-            <ChevronDown className={cn("w-3 h-3 transition-transform duration-300", showFilter ? "rotate-180" : "")} />
+          <button onClick={() => setShowFilter(f => !f)} className={cn("flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all text-sm font-semibold", (showFilter || activeFiltersCount > 0) ? "bg-[var(--accent-dim)] border-[var(--accent)] text-[var(--accent)]" : "bg-[var(--bg-surface)] border-[var(--border-default)] text-[var(--fg-muted)]")}>
+            <Filter className="w-4 h-4" /> Filtra{activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ''}
           </button>
-
-          <button
-            onClick={exportToCSV}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-xl text-sm font-bold text-[var(--fg-muted)] hover:text-[var(--fg-primary)] hover:border-[var(--border-default)] transition-all"
-          >
-            <Download size={14} />
-            <span className="hidden sm:inline">Esporta CSV</span>
+          <button onClick={exportToCSV} className="flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-xl text-sm font-bold text-[var(--fg-muted)] hover:text-[var(--fg-primary)] transition-all">
+            <Download size={14} /> Esporta CSV
           </button>
         </div>
-        
         {filtered.length > 0 && (
-          <button 
-            onClick={toggleSelectAll}
-            className="text-xs font-bold text-[var(--accent)] hover:underline px-2"
-          >
+          <button onClick={toggleSelectAll} className="text-xs font-bold text-[var(--accent)] hover:underline px-2">
             {selectedTx.length === filtered.length ? 'Deseleziona tutto' : 'Seleziona tutti i risultati'}
           </button>
         )}
@@ -340,55 +294,33 @@ export default function TransactionsTable({ transactions, categories, accounts, 
       {/* Filter panel */}
       <AnimatePresence>
         {showFilter && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
             <div className="p-4 sm:p-6 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-2xl flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-6 items-stretch sm:items-end glass">
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 flex-1 min-w-[140px]">
                 <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest">Stato</label>
-                <select
-                  value={filterStatus}
-                  onChange={e => setFilterStatus(e.target.value as any)}
-                  className="px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)] w-full sm:min-w-[140px]"
-                >
+                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)} className="px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-lg text-sm">
                   <option value="ALL">Tutti gli stati</option>
                   <option value="STAGED">In attesa</option>
                   <option value="CONFIRMED">Confermati</option>
                 </select>
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 flex-1 min-w-[140px]">
                 <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest">Tipo</label>
-                <select
-                  value={filterType}
-                  onChange={e => setFilterType(e.target.value as any)}
-                  className="px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)] w-full sm:min-w-[140px]"
-                >
+                <select value={filterType} onChange={e => setFilterType(e.target.value as any)} className="px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-lg text-sm">
                   <option value="ALL">Tutti i tipi</option>
                   <option value="income">Solo Entrate</option>
                   <option value="expense">Solo Uscite</option>
                 </select>
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 flex-1 min-w-[180px]">
                 <label className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-widest">Categoria</label>
-                <select
-                  value={filterCategoryId}
-                  onChange={e => setFilterCategoryId(e.target.value)}
-                  className="px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)] w-full sm:min-w-[180px]"
-                >
+                <select value={filterCategoryId} onChange={e => setFilterCategoryId(e.target.value)} className="px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-lg text-sm">
                   <option value="ALL">Tutte le categorie</option>
                   <option value="">Non categorizzato</option>
                   {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
-              <button
-                onClick={() => { setFilterStatus('ALL'); setFilterType('ALL'); setFilterCategoryId('ALL'); setSearch('') }}
-                className="px-4 py-2 text-sm font-bold text-[var(--expense)] hover:bg-[var(--expense-dim)] rounded-lg transition-colors sm:ml-auto"
-              >
-                Resetta Filtri
-              </button>
+              <button onClick={() => { setFilterStatus('ALL'); setFilterType('ALL'); setFilterCategoryId('ALL'); setSearch('') }} className="px-4 py-2 text-sm font-bold text-[var(--expense)]">Resetta</button>
             </div>
           </motion.div>
         )}
@@ -397,77 +329,37 @@ export default function TransactionsTable({ transactions, categories, accounts, 
       {/* AI Suggestion Panel */}
       <AnimatePresence>
         {showAiPanel && aiSuggestions.length > 0 && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="mb-6 overflow-hidden"
-          >
-            <div className="glass p-6 rounded-[2rem] border border-[var(--border-accent)]/30 bg-[var(--bg-elevated)]/50">
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mb-6 overflow-hidden">
+            <div className="glass p-6 rounded-[2rem] border border-[var(--accent)]/30 bg-[var(--accent-dim)]/5">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-[var(--accent)] text-[var(--accent-on)] rounded-xl shadow-lg shadow-[var(--glow-accent)]">
-                    <Sparkles size={18} />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black text-[var(--fg-primary)] uppercase tracking-widest">Suggerimenti AI Groq</h3>
-                    <p className="text-[10px] text-[var(--fg-muted)] font-medium">L'intelligenza artificiale ha analizzato {aiSuggestions.length} movimenti</p>
-                  </div>
+                  <div className="p-2 bg-[var(--accent)] text-[var(--accent-on)] rounded-xl shadow-lg"><Sparkles size={18} /></div>
+                  <h3 className="text-sm font-black text-[var(--fg-primary)] uppercase tracking-widest text-left">Suggerimenti AI Groq ({aiSuggestions.length})</h3>
                 </div>
-                <button onClick={() => setShowAiPanel(false)} className="p-2 text-[var(--fg-muted)] hover:text-[var(--fg-primary)] transition-all">
-                  <X size={18} />
-                </button>
+                <button onClick={() => setShowAiPanel(false)} className="p-2 text-[var(--fg-muted)]"><X size={18} /></button>
               </div>
-
               <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                 {aiSuggestions.map((s, idx) => {
                   const tx = transactions.find(t => t.id === s.transactionId)
                   return (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-[var(--bg-surface)]/50 rounded-2xl border border-[var(--border-subtle)] hover:border-[var(--accent)]/20 transition-all group">
+                    <div key={idx} className="flex items-center justify-between p-3 bg-[var(--bg-surface)]/50 rounded-2xl border border-[var(--border-subtle)]">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <input 
-                          type="checkbox" 
-                          checked={s.accepted} 
-                          onChange={() => setAiSuggestions(prev => prev.map((p, i) => i === idx ? { ...p, accepted: !p.accepted } : p))}
-                          className="w-4 h-4 rounded-md border-[var(--border-strong)] bg-transparent text-[var(--accent)] focus:ring-[var(--accent-dim)] accent-[var(--accent)] cursor-pointer"
-                        />
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-[var(--fg-primary)] truncate">{tx?.description}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] text-[var(--fg-muted)] font-medium">{formatCurrency(tx ? Number(tx.amount) : 0)}</span>
-                            <span className="text-[10px] text-[var(--accent)] font-black uppercase tracking-tighter">
-                              → {s.categoryName || 'Incertezza'}
-                            </span>
-                          </div>
+                        <input type="checkbox" checked={s.accepted} onChange={() => setAiSuggestions(prev => prev.map((p, i) => i === idx ? { ...p, accepted: !p.accepted } : p))} className="w-4 h-4 accent-[var(--accent)]" />
+                        <div className="min-w-0 text-left">
+                          <p className="text-xs font-bold truncate">{tx?.description}</p>
+                          <p className="text-[10px] text-[var(--accent)] font-black uppercase">→ {s.categoryName || '?'}</p>
                         </div>
                       </div>
-                      <div className={cn(
-                        "text-[10px] font-black px-2 py-1 rounded-lg border",
-                        s.confidence >= 0.8 ? "bg-[var(--income-dim)] text-[var(--income)] border-[var(--income)]/20" :
-                        s.confidence >= 0.5 ? "bg-[var(--warning-dim)] text-[var(--warning)] border-[var(--warning)]/20" :
-                        "bg-[var(--expense-dim)] text-[var(--expense)] border-[var(--expense)]/20"
-                      )}>
-                        {Math.round(s.confidence * 100)}%
-                      </div>
+                      <div className="text-[10px] font-black px-2 py-1 rounded-lg border border-[var(--accent)]/20 text-[var(--accent)]">{Math.round(s.confidence * 100)}%</div>
                     </div>
                   )
                 })}
               </div>
-
-              <div className="mt-6 flex items-center gap-3">
-                <button
-                  onClick={handleAcceptAiSuggestions}
-                  disabled={isPending}
-                  className="flex-1 py-3 bg-[var(--accent)] text-[var(--accent-on)] rounded-xl font-bold text-xs uppercase tracking-widest hover:shadow-[0_10px_25px_var(--glow-accent)] transition-all active:scale-[0.98] disabled:opacity-50"
-                >
+              <div className="mt-6 flex gap-3">
+                <button onClick={handleAcceptAiSuggestions} disabled={isPending} className="flex-1 py-3 bg-[var(--accent)] text-[var(--accent-on)] rounded-xl font-bold text-xs uppercase tracking-widest disabled:opacity-50">
                   {isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : `Applica ${aiSuggestions.filter(s => s.accepted).length} suggerimenti`}
                 </button>
-                <button
-                  onClick={() => setAiSuggestions(prev => prev.map(p => ({ ...p, accepted: true })))}
-                  className="px-4 py-3 bg-[var(--bg-elevated)] text-[var(--fg-muted)] rounded-xl font-bold text-[10px] uppercase tracking-widest hover:text-[var(--fg-primary)] transition-all"
-                >
-                  Seleziona tutti
-                </button>
+                <button onClick={() => setAiSuggestions(prev => prev.map(p => ({ ...p, accepted: true })))} className="px-4 py-3 bg-[var(--bg-elevated)] text-[var(--fg-muted)] rounded-xl font-bold text-[10px] uppercase">Tutti</button>
               </div>
             </div>
           </motion.div>
@@ -478,106 +370,32 @@ export default function TransactionsTable({ transactions, categories, accounts, 
       <div className="space-y-8">
         {groupedTransactions.map(([date, { txs, net }]) => (
           <div key={date} className="space-y-2">
-            <div className="flex items-center justify-between px-3 sm:px-6 py-2 bg-[var(--bg-elevated)]/40 rounded-2xl border border-[var(--border-subtle)]">
-              <span className="text-xs font-black text-[var(--fg-primary)] uppercase tracking-widest">
-                <span className="hidden sm:inline">{new Date(date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                <span className="sm:hidden">{new Date(date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-              </span>
-              <span className={cn(
-                "text-xs font-mono font-bold tracking-tight",
-                net >= 0 ? "text-[var(--income)]" : "text-[var(--expense)]"
-              )}>
-                {net > 0 ? '+' : ''}{formatCurrency(net)} <span className="text-[var(--fg-subtle)] font-medium text-[9px] uppercase ml-1">netto</span>
-              </span>
+            <div className="flex items-center justify-between px-3 sm:px-6 py-2 bg-[var(--bg-elevated)]/40 rounded-2xl border border-[var(--border-subtle)] text-left">
+              <span className="text-xs font-black text-[var(--fg-primary)] uppercase tracking-widest">{new Date(date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              <span className={cn("text-xs font-mono font-bold", net >= 0 ? "text-[var(--income)]" : "text-[var(--expense)]")}>{net > 0 ? '+' : ''}{formatCurrency(net)}</span>
             </div>
-
             <div className="glass rounded-[2rem] overflow-hidden border border-[var(--border-subtle)] shadow-sm">
               <div className="divide-y divide-[var(--border-subtle)]">
                 {txs.map((tx) => (
-                  <div 
-                    key={tx.id} 
-                    className={cn(
-                      "group flex items-center justify-between p-4 transition-all duration-200",
-                      selectedTx.includes(tx.id) ? "bg-[var(--accent-dim)]/5" : "hover:bg-[var(--bg-elevated)]/30"
-                    )}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center">
-                        <input 
-                          type="checkbox" 
-                          checked={selectedTx.includes(tx.id)} 
-                          onChange={() => toggleSelect(tx.id)} 
-                          aria-label={`Seleziona transazione ${tx.description}`}
-                          className="w-4 h-4 rounded-md border-[var(--border-strong)] bg-transparent text-[var(--accent)] focus:ring-[var(--accent-dim)] accent-[var(--accent)] cursor-pointer" 
-                        />
-                      </div>
-                      <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shadow-sm border border-white/5",
-                        Number(tx.amount) < 0 ? "bg-[var(--expense-dim)] text-[var(--expense)]" : "bg-[var(--income-dim)] text-[var(--income)]"
-                      )}>
-                        {tx.category?.name?.[0] || '?'}
-                      </div>
+                  <div key={tx.id} className={cn("group flex items-center justify-between p-4 transition-all", selectedTx.includes(tx.id) ? "bg-[var(--accent-dim)]/5" : "hover:bg-[var(--bg-elevated)]/30")}>
+                    <div className="flex items-center gap-4 text-left">
+                      <input type="checkbox" checked={selectedTx.includes(tx.id)} onChange={() => toggleSelect(tx.id)} className="w-4 h-4 rounded-md accent-[var(--accent)] cursor-pointer" />
+                      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs bg-[var(--bg-elevated)]")}>{tx.category?.name?.[0] || '?'}</div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-bold text-[var(--fg-primary)] group-hover:text-[var(--accent)] transition-colors line-clamp-1">
-                            {tx.description}
-                          </p>
-                          <button 
-                            onClick={() => setEditingTx(tx)}
-                            className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--bg-elevated)] rounded-lg text-[var(--fg-subtle)] hover:text-[var(--accent)] transition-all"
-                          >
-                            <Edit2 size={12} />
-                          </button>
+                          <p className="text-sm font-bold truncate max-w-[200px]">{tx.description}</p>
+                          <button onClick={() => setEditingTx(tx)} className="p-1 hover:bg-[var(--bg-elevated)] rounded-lg text-[var(--fg-subtle)]"><Edit2 size={12} /></button>
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          {tx.isTransfer ? (
-                            <span className="flex items-center gap-1 text-[9px] font-black text-blue-400 uppercase bg-blue-500/10 px-1.5 py-0.5 rounded-md border border-blue-500/10">
-                              <ArrowRightLeft size={8} /> Trasferimento
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase tracking-wider">
-                              {tx.category?.name || 'Senza categoria'}
-                            </span>
-                          )}
-                          <span className="w-1 h-1 rounded-full bg-[var(--border-strong)]" />
-                          <span className="text-[10px] font-medium text-[var(--fg-subtle)] uppercase tracking-tighter">
-                            {tx.account.name}
-                          </span>
-                          {tx.status === 'STAGED' && (
-                            <span className="flex items-center gap-1 text-[9px] font-black text-[var(--warning)] uppercase bg-[var(--warning-dim)] px-1.5 py-0.5 rounded-md ml-1 border border-[var(--warning)]/10">
-                              <AlertCircle size={8} /> In attesa
-                            </span>
-                          )}
+                          {tx.isTransfer ? <span className="text-[9px] font-black text-blue-400 uppercase bg-blue-500/10 px-1.5 py-0.5 rounded-md">Trasferimento</span> : <span className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase">{tx.category?.name || 'Senza categoria'}</span>}
+                          <span className="text-[10px] font-medium text-[var(--fg-subtle)] uppercase">{tx.account.name}</span>
+                          {tx.status === 'STAGED' && <span className="text-[9px] font-black text-[var(--warning)] uppercase bg-[var(--warning-dim)] px-1.5 py-0.5 rounded-md">In attesa</span>}
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      {tx.isTransfer && tx.status === 'STAGED' && (
-                        <button
-                          onClick={() => handleConfirmTransferPair(tx.id)}
-                          disabled={isPending}
-                          className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white rounded-lg transition-all"
-                          title="Conferma entrambe le leg del trasferimento"
-                        >
-                          <CheckCircle2 size={14} />
-                        </button>
-                      )}
-                      {tx.isTransfer && (
-                        <button
-                          onClick={() => handleUnlinkTransfer(tx.id)}
-                          disabled={isPending}
-                          className="p-1.5 bg-[var(--bg-elevated)] text-[var(--fg-subtle)] hover:text-[var(--expense)] rounded-lg transition-all"
-                          title="Scollega trasferimento"
-                        >
-                          <X size={14} />
-                        </button>
-                      )}
-                      <span className={cn(
-                        "font-mono font-bold text-base tracking-tighter",
-                        Number(tx.amount) < 0 ? "text-[var(--expense)]" : "text-[var(--income)]"
-                      )}>
-                        {Number(tx.amount) > 0 ? '+' : ''}{formatCurrency(Number(tx.amount))}
-                      </span>
+                      {tx.isTransfer && tx.status === 'STAGED' && <button onClick={() => handleConfirmTransferPair(tx.id)} className="p-1.5 bg-blue-500/10 text-blue-400 rounded-lg"><CheckCircle2 size={14} /></button>}
+                      <span className={cn("font-mono font-bold text-base", Number(tx.amount) < 0 ? "text-[var(--expense)]" : "text-[var(--income)]")}>{Number(tx.amount) > 0 ? '+' : ''}{formatCurrency(Number(tx.amount))}</span>
                     </div>
                   </div>
                 ))}
@@ -585,112 +403,62 @@ export default function TransactionsTable({ transactions, categories, accounts, 
             </div>
           </div>
         ))}
-
-        {filtered.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-center glass rounded-[3rem] border border-dashed border-[var(--border-default)]">
-            <div className="w-16 h-16 bg-[var(--bg-elevated)] rounded-full flex items-center justify-center mb-4">
-              <Search className="text-[var(--fg-subtle)]" />
-            </div>
-            <p className="text-[var(--fg-muted)] font-bold text-lg">Nessuna transazione trovata</p>
-            <p className="text-[var(--fg-subtle)] text-sm max-w-xs mt-2">Prova a regolare i filtri o i termini di ricerca nel mese selezionato.</p>
-          </div>
-        )}
       </div>
 
       {/* Edit Modal */}
-      {editingTx && (
-        <TransactionEditModal 
-          transaction={editingTx} 
-          categories={categories} 
-          accounts={accounts} 
-          onClose={() => setEditingTx(null)} 
-        />
-      )}
+      {editingTx && <TransactionEditModal transaction={editingTx} categories={categories} accounts={accounts} onClose={() => setEditingTx(null)} />}
+
+      {/* Quick Category Modal */}
+      <AnimatePresence>
+        {showQuickCategoryModal && (
+          <QuickCategoryModal 
+            onClose={() => setShowQuickCategoryModal(false)}
+            onSuccess={(newId) => {
+              setShowQuickCategoryModal(false)
+              // If we have selected transactions, apply the new category automatically
+              if (selectedTx.length > 0 && newId) {
+                startTransition(async () => {
+                  await setTransactionCategory(selectedTx, newId)
+                  router.refresh()
+                })
+              } else {
+                router.refresh()
+              }
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Floating Bulk Actions Bar */}
       <AnimatePresence>
         {selectedTx.length > 0 && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            className="fixed left-1/2 -translate-x-1/2 z-50 w-full max-w-3xl px-3 sm:px-4"
-            style={{ bottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}
-          >
-            <div className="glass p-3 sm:p-4 rounded-2xl sm:rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-[var(--border-default)] flex items-center justify-between gap-2 sm:gap-6">
-              <div className="flex items-center gap-2 sm:gap-4 pl-1 sm:pl-2">
-                <div className="w-10 h-10 bg-[var(--accent)] rounded-full flex items-center justify-center text-[var(--accent-on)] font-bold text-sm shadow-[0_0_15px_var(--glow-accent)]">
-                  {selectedTx.length}
-                </div>
-                <div className="hidden sm:block">
-                  <p className="text-sm font-bold text-[var(--fg-primary)]">Elementi selezionati</p>
-                  <p className="text-[10px] font-bold text-[var(--accent)] uppercase tracking-widest">Modifica Batch</p>
-                </div>
+          <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }} className="fixed left-1/2 -translate-x-1/2 z-50 w-full max-w-3xl px-4 bottom-6">
+            <div className="glass p-4 rounded-[2.5rem] shadow-2xl border border-[var(--border-default)] flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 pl-2">
+                <div className="w-10 h-10 bg-[var(--accent)] rounded-full flex items-center justify-center text-[var(--accent-on)] font-bold shadow-lg">{selectedTx.length}</div>
+                <div className="hidden sm:block text-left"><p className="text-xs font-bold uppercase tracking-widest text-[var(--accent)]">Batch Action</p></div>
               </div>
-
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <button 
-                  onClick={handleAiCategorize} 
-                  disabled={isAiLoading || isPending} 
-                  className="flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-elevated)] text-[var(--accent)] border border-[var(--accent)]/30 rounded-xl hover:bg-[var(--accent)] hover:text-[var(--accent-on)] transition-all duration-300 font-bold text-xs disabled:opacity-50"
-                >
-                  {isAiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                  <span className="hidden sm:inline">AI Categorizza</span>
+              <div className="flex items-center gap-2">
+                <button onClick={handleAiCategorize} disabled={isAiLoading || isPending} className="flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-elevated)] text-[var(--accent)] rounded-xl font-bold text-xs uppercase transition-all">
+                  {isAiLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                  <span className="hidden md:inline">AI (Max 50)</span>
                 </button>
-
                 <div className="relative group">
                   <Tags className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--accent)] w-3.5 h-3.5 pointer-events-none" />
-                  <select
-                    onChange={handleChangeCategory}
-                    className="pl-8 pr-6 py-2 sm:py-2.5 bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-xl text-[10px] sm:text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[var(--accent)] cursor-pointer appearance-none transition-all max-w-[110px] sm:max-w-none"
-                  >
+                  <select onChange={handleChangeCategory} className="pl-8 pr-8 py-2.5 bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-xl text-xs font-bold focus:outline-none appearance-none cursor-pointer max-w-[140px] sm:max-w-none">
                     <option>Cambia Categoria</option>
-                    {bothCategories.length > 0 && (
-                      <optgroup label="── Entrambe ──">
-                        {bothCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </optgroup>
-                    )}
-                    {incomeCategories.length > 0 && (
-                      <optgroup label="── Solo Entrate ──">
-                        {incomeCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </optgroup>
-                    )}
-                    {expenseCategories.length > 0 && (
-                      <optgroup label="── Solo Uscite ──">
-                        {expenseCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </optgroup>
-                    )}
+                    <option value="new_category" className="text-[var(--accent)] font-black">+ Nuova Categoria...</option>
+                    <option disabled>──────────</option>
+                    {bothCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {incomeCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {expenseCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     <option value="none">— Rimuovi Categoria —</option>
                   </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--fg-subtle)] w-3 h-3 pointer-events-none" />
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--fg-subtle)] w-3 h-3 pointer-events-none" />
                 </div>
-
-                <button 
-                  onClick={handleConfirm} 
-                  disabled={isPending} 
-                  className="flex items-center gap-2 px-5 py-2.5 bg-[var(--accent)] text-[var(--accent-on)] rounded-xl hover:shadow-[0_0_20px_var(--glow-accent)] transition-all duration-300 font-bold text-xs disabled:opacity-50"
-                >
-                  {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                  <span className="hidden sm:inline">Conferma</span>
-                </button>
-
-                <button 
-                  onClick={handleDelete} 
-                  disabled={isPending} 
-                  className="flex items-center gap-2 px-5 py-2.5 bg-[var(--expense-dim)] text-[var(--expense)] border border-[var(--expense)]/20 rounded-xl hover:bg-[var(--expense)] hover:text-white transition-all duration-300 font-bold text-xs disabled:opacity-50"
-                >
-                  {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                  <span className="hidden sm:inline">Elimina</span>
-                </button>
-
-                <div className="w-px h-8 bg-[var(--border-subtle)] mx-1" />
-
-                <button 
-                  onClick={() => setSelectedTx([])} 
-                  className="p-2.5 text-[var(--fg-muted)] hover:text-[var(--fg-primary)] rounded-xl hover:bg-[var(--bg-elevated)] transition-all"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <button onClick={handleConfirm} disabled={isPending} className="px-5 py-2.5 bg-[var(--accent)] text-[var(--accent-on)] rounded-xl font-bold text-xs uppercase shadow-lg hover:shadow-[var(--accent-dim)] transition-all">Conferma</button>
+                <button onClick={handleDelete} disabled={isPending} className="p-2.5 bg-[var(--expense-dim)] text-[var(--expense)] rounded-xl hover:bg-[var(--expense)] hover:text-white transition-all"><Trash2 size={16} /></button>
+                <button onClick={() => setSelectedTx([])} className="p-2.5 text-[var(--fg-muted)] hover:bg-[var(--bg-elevated)] rounded-xl"><X size={18} /></button>
               </div>
             </div>
           </motion.div>

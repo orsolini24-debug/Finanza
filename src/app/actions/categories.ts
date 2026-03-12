@@ -16,7 +16,7 @@ export async function createCategory(formData: FormData) {
 
     if (!name) throw new Error("Nome categoria obbligatorio");
 
-    await prisma.category.create({
+    const category = await prisma.category.create({
       data: {
         workspaceId: workspace.id,
         name,
@@ -28,7 +28,7 @@ export async function createCategory(formData: FormData) {
 
     revalidatePath('/app/categories');
     revalidatePath('/app/dashboard');
-    return { success: true };
+    return { success: true, category };
   } catch (error: any) {
     console.error('[createCategory]', error?.message, error?.kind, error?.code);
     throw new Error(error.message || 'Errore durante la creazione');

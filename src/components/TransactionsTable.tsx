@@ -82,6 +82,15 @@ export default function TransactionsTable({ transactions, categories, accounts, 
     setSelectedTx(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
   }
 
+  const toggleSelectDay = (dayTxIds: string[]) => {
+    const allSelected = dayTxIds.every(id => selectedTx.includes(id))
+    if (allSelected) {
+      setSelectedTx(prev => prev.filter(id => !dayTxIds.includes(id)))
+    } else {
+      setSelectedTx(prev => [...new Set([...prev, ...dayTxIds])])
+    }
+  }
+
   const toggleSelectAll = () => {
     if (selectedTx.length === filtered.length) {
       setSelectedTx([])
@@ -177,7 +186,7 @@ export default function TransactionsTable({ transactions, categories, accounts, 
     if (isAiLoading || isPending) return
     const idsToProcess = selectedTx.length > 0 ? selectedTx : filtered.filter(t => t.status === 'STAGED').map(t => t.id)
     if (idsToProcess.length === 0) return toast.error("Nessuna transazione in attesa.")
-    if (idsToProcess.length > 50) return toast.error("Seleziona massimo 50 transazioni alla volta.")
+    if (idsToProcess.length > 100) return toast.error("Seleziona massimo 100 transazioni alla volta.")
 
     setIsAiLoading(true)
     try {
@@ -397,10 +406,24 @@ export default function TransactionsTable({ transactions, categories, accounts, 
 
       {/* Grouped List */}
       <div className="space-y-8">
-        {groupedTransactions.map(([date, { txs, net }]) => (
+        {groupedTransactions.map(([date, { txs, net }]) => {
+          const dayTxIds = txs.map(t => t.id)
+          const allDaySelected = dayTxIds.length > 0 && dayTxIds.every(id => selectedTx.includes(id))
+          const someDaySelected = dayTxIds.some(id => selectedTx.includes(id))
+          return (
           <div key={date} className="space-y-2">
             <div className="flex items-center justify-between px-3 sm:px-6 py-2 bg-[var(--bg-elevated)]/40 rounded-2xl border border-[var(--border-subtle)] text-left">
-              <span className="text-xs font-black text-[var(--fg-primary)] uppercase tracking-widest">{new Date(date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={allDaySelected}
+                  ref={el => { if (el) el.indeterminate = someDaySelected && !allDaySelected }}
+                  onChange={() => toggleSelectDay(dayTxIds)}
+                  className="w-4 h-4 rounded-md accent-[var(--accent)] cursor-pointer"
+                  title="Seleziona/deseleziona il giorno"
+                />
+                <span className="text-xs font-black text-[var(--fg-primary)] uppercase tracking-widest">{new Date(date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              </div>
               <span className={cn("text-xs font-mono font-bold", net >= 0 ? "text-[var(--income)]" : "text-[var(--expense)]")}>{net > 0 ? '+' : ''}{formatCurrency(net)}</span>
             </div>
             <div className="glass rounded-[2rem] overflow-hidden border border-[var(--border-subtle)] shadow-sm">
@@ -439,7 +462,8 @@ export default function TransactionsTable({ transactions, categories, accounts, 
               </div>
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Edit Modal */}
@@ -486,7 +510,7 @@ export default function TransactionsTable({ transactions, categories, accounts, 
                 </button>
                 <button onClick={handleAiCategorize} disabled={isAiLoading || isPending} className="flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-elevated)] text-[var(--accent)] rounded-xl font-bold text-xs uppercase transition-all">
                   {isAiLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                  <span className="hidden md:inline">AI (Max 50)</span>
+                  <span className="hidden md:inline">AI (Max 100)</span>
                 </button>
                 <div className="relative group">
                   <Tags className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--accent)] w-3.5 h-3.5 pointer-events-none" />

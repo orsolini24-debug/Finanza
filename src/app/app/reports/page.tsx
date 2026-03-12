@@ -7,10 +7,12 @@ import { formatCurrency } from "@/lib/utils";
 import dynamic from 'next/dynamic';
 
 const ReportsClient = dynamic(() => import("@/components/reports/ReportsClient").then(mod => mod.ReportsClient), {
+  ssr: false,
   loading: () => <div className="h-96 skeleton rounded-[3rem] animate-pulse bg-[var(--bg-elevated)]" />
 });
 
 const CashFlowChart = dynamic(() => import("@/components/reports/CashFlowChart"), {
+  ssr: false,
   loading: () => <div className="h-96 skeleton rounded-[3rem] animate-pulse bg-[var(--bg-elevated)]" />
 });
 

@@ -2,7 +2,12 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
-import SimulatorClient from '@/components/simulator/SimulatorClient'
+import dynamic from 'next/dynamic'
+
+const SimulatorClient = dynamic(() => import('@/components/simulator/SimulatorClient'), {
+  ssr: false,
+  loading: () => <div className="h-96 animate-pulse bg-[var(--bg-elevated)] rounded-[3rem]" />
+})
 
 export default async function SimulatorPage() {
   const session = await getServerSession(authOptions)

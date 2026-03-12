@@ -216,3 +216,22 @@ export async function getSuggestedRules(workspaceId: string) {
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
 }
+
+export async function searchTransactions(workspaceId: string, query: string, limit = 20) {
+  await requireWorkspaceAccess(workspaceId);
+  if (!query || query.trim().length < 2) return [];
+
+  return prisma.transaction.findMany({
+    where: {
+      workspaceId,
+      OR: [
+        { description: { contains: query, mode: 'insensitive' } },
+        { category: { name: { contains: query, mode: 'insensitive' } } },
+        { account: { name: { contains: query, mode: 'insensitive' } } },
+      ]
+    },
+    include: { category: true, account: true },
+    orderBy: { date: 'desc' },
+    take: limit,
+  });
+}

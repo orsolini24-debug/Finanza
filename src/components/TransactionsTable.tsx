@@ -11,6 +11,7 @@ import { cn, formatCurrency } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 import TransactionEditModal from './transactions/TransactionEditModal'
 import QuickCategoryModal from './categories/QuickCategoryModal'
+import TransferModal from './transfers/TransferModal'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import LottieAnimation from '@/components/ui/LottieAnimation'
@@ -31,6 +32,7 @@ export default function TransactionsTable({ transactions, categories, accounts, 
   const [selectedTx, setSelectedTx] = useState<string[]>([])
   const [editingTx, setEditingTx] = useState<TransactionWithRelations | null>(null)
   const [showQuickCategoryModal, setShowQuickCategoryModal] = useState(false)
+  const [showTransferModal, setShowTransferModal] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [isAiLoading, setIsAiLoading] = useState(false)
@@ -414,7 +416,15 @@ export default function TransactionsTable({ transactions, categories, accounts, 
                           <button onClick={() => setEditingTx(tx)} className="p-1 hover:bg-[var(--bg-elevated)] rounded-lg text-[var(--fg-subtle)]"><Edit2 size={12} /></button>
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          {tx.isTransfer ? <span className="text-[9px] font-black text-blue-400 uppercase bg-blue-500/10 px-1.5 py-0.5 rounded-md">Trasferimento</span> : <span className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase">{tx.category?.name || 'Senza categoria'}</span>}
+                          {tx.isTransfer ? (
+                            <span className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase flex items-center gap-1" title="Trasferimento tra conti — escluso da entrate/uscite">
+                              ↔ Trasferimento
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase">
+                              {tx.category?.name || 'Senza categoria'}
+                            </span>
+                          )}
                           <span className="text-[10px] font-medium text-[var(--fg-subtle)] uppercase">{tx.account.name}</span>
                           {tx.status === 'STAGED' && <span className="text-[9px] font-black text-[var(--warning)] uppercase bg-[var(--warning-dim)] px-1.5 py-0.5 rounded-md">In attesa</span>}
                         </div>
@@ -456,6 +466,11 @@ export default function TransactionsTable({ transactions, categories, accounts, 
         )}
       </AnimatePresence>
 
+      {/* Transfer Modal */}
+      {showTransferModal && (
+        <TransferModal accounts={accounts} onClose={() => setShowTransferModal(false)} onSuccess={() => router.refresh()} />
+      )}
+
       {/* Floating Bulk Actions Bar */}
       <AnimatePresence>
         {selectedTx.length > 0 && (
@@ -466,6 +481,9 @@ export default function TransactionsTable({ transactions, categories, accounts, 
                 <div className="hidden sm:block text-left"><p className="text-xs font-bold uppercase tracking-widest text-[var(--accent)]">Batch Action</p></div>
               </div>
               <div className="flex items-center gap-2">
+                <button onClick={() => setShowTransferModal(true)} className="flex items-center gap-2 px-3 py-2.5 bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-xl text-xs font-bold text-[var(--fg-primary)] hover:bg-[var(--bg-surface)] transition-all">
+                  <ArrowRightLeft size={14} /> <span className="hidden md:inline">Trasferimento</span>
+                </button>
                 <button onClick={handleAiCategorize} disabled={isAiLoading || isPending} className="flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-elevated)] text-[var(--accent)] rounded-xl font-bold text-xs uppercase transition-all">
                   {isAiLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
                   <span className="hidden md:inline">AI (Max 50)</span>

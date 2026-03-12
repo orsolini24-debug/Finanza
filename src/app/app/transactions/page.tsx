@@ -1,9 +1,11 @@
+export const dynamic = 'force-dynamic';
+
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import TransactionsTable from "@/components/TransactionsTable";
-import { getCurrentMonth, getPeriodRange } from "@/lib/period";
+import { getCurrentMonth, getPeriodRange, getDayRange } from "@/lib/period";
 import { getSuggestedRules } from "@/app/actions/transactions";
 import { detectTransferCandidates } from "@/app/actions/transfers";
 import RuleSuggestions from "@/components/transactions/RuleSuggestions";
@@ -19,7 +21,9 @@ export default async function TransactionsPage({
 
   const resolvedSearchParams = await searchParams;
   const month = (resolvedSearchParams.month as string) || getCurrentMonth();
-  const { start, end } = getPeriodRange(month);
+  const day = resolvedSearchParams.day as string;
+  
+  const { start, end } = day ? getDayRange(month, day) : getPeriodRange(month);
 
   const userId = (session.user as any).id;
   const workspace = await prisma.workspace.findFirst({

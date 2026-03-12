@@ -5,7 +5,7 @@ import Papa from 'papaparse'
 import {
   Upload, CheckCircle2, AlertCircle, FileText, ArrowRight,
   ArrowLeft, Loader2, Info, History, Trash2,
-  AlertTriangle, ChevronDown, Package,
+  AlertTriangle, ChevronDown, Package, Sparkles, Tag,
 } from 'lucide-react'
 import { processImport, getAccountsForImport, getImportHistory, deleteImportBatch } from '@/app/actions/import'
 import { cn } from '@/lib/utils'
@@ -26,6 +26,7 @@ type Mapping = {
   description:   string
   counterpart:   string
   paymentMethod: string
+  bankCategory:  string   // colonna categoria della banca (opzionale)
 }
 
 type ConfidenceLevel = 'certain' | 'probable' | 'uncertain' | 'none'
@@ -33,6 +34,14 @@ type FieldConfidence = {
   level:  ConfidenceLevel
   pct:    number
   reason: string
+}
+
+// Formato banca rilevato automaticamente
+type BankFormat = 'sella' | 'bpm' | 'generic'
+const BANK_FORMAT_LABEL: Record<BankFormat, string> = {
+  sella:   'Banca Popolare / Sella / simile',
+  bpm:     'BancoBPM / Webank / simile',
+  generic: 'Generico',
 }
 
 // ── Riferimento colonna Excel (0-based → A, B, C, … Z, AA, …) ──
@@ -46,9 +55,75 @@ function colLetter(idx: number): string {
   return s
 }
 
-// ── Keyword con peso per auto-detect ───────────────────────────
-type KWEntry = [string, number]
+// ── Trova la riga header reale ignorando le righe di metadati in testa ──
+// Strategia: prima riga in cui ≥3 celle contengono esattamente una keyword bancaria
+const BANKING_KEYWORDS_EXACT = new Set([
+  'data', 'importo', 'causale', 'movimento', 'operazione', 'categoria',
+  'descrizione', 'valuta', 'saldo', 'beneficiario', 'controparte',
+  'addebito', 'accredito', 'dettagli', 'contabilizzazione',
+  'data valuta', 'data contabile', 'data operazione',
+  'amount', 'date', 'description', 'balance',
+])
 
+function findHeaderRow(rawRows: string[][]): number {
+  for (let i = 0; i < Math.min(rawRows.length, 40); i++) {
+    const row = rawRows[i]
+    const hits = row.filter(cell => {
+      const lc = cell.trim().toLowerCase()
+      return lc.length > 0 && BANKING_KEYWORDS_EXACT.has(lc)
+    }).length
+    if (hits >= 2) return i
+  }
+  // Fallback: prima riga con ≥3 celle non vuote
+  for (let i = 0; i < Math.min(rawRows.length, 40); i++) {
+    if (rawRows[i].filter(c => c.trim()).length >= 3) return i
+  }
+  return 0
+}
+
+// ── Rileva il formato della banca dagli header ─────────────────
+function detectBankFormat(hdrs: string[]): BankFormat {
+  const lh = hdrs.map(h => h.toLowerCase().trim())
+  // Sella: ha "causale", "movimento", "beneficiario"
+  if (lh.includes('causale') && lh.includes('movimento') && lh.includes('beneficiario')) return 'sella'
+  // BPM: ha "operazione", "contabilizzazione" (e spesso "categoria")
+  if (lh.includes('operazione') && lh.includes('contabilizzazione')) return 'bpm'
+  return 'generic'
+}
+
+// ── Mapping ottimale per formato banca rilevato ─────────────────
+function getBankAutoMapping(fmt: BankFormat, hdrs: string[]): Partial<Mapping> {
+  const find = (name: string) => hdrs.find(h => h.toLowerCase().trim() === name) ?? ''
+
+  if (fmt === 'sella') {
+    // Causale = merchant (carte) o tipo op (bonifici) → best as description
+    // Movimento = tipo pag (carte) o motivo (bonifici) → best as counterpart
+    // La logica di smart-swap avviene in processImport lato server
+    return {
+      date:        find('data'),
+      amount:      find('importo'),
+      description: find('causale'),
+      counterpart: find('movimento'),
+    }
+  }
+
+  if (fmt === 'bpm') {
+    // Operazione = merchant name pulito
+    // Categoria = categoria banca (ORO per auto-categorizzazione)
+    return {
+      date:         find('data'),
+      amount:       find('importo'),
+      description:  find('operazione'),
+      counterpart:  find('dettagli'),
+      bankCategory: hdrs.find(h => h.toLowerCase().trim() === 'categoria') ?? '',
+    }
+  }
+
+  return {}
+}
+
+// ── Keyword con peso per auto-detect fallback ───────────────────
+type KWEntry = [string, number]
 const KW_DATE: KWEntry[] = [
   ['data operazione', 4], ['data contabile', 4], ['data mov', 4],
   ['data esec', 4], ['data val', 3],
@@ -61,10 +136,9 @@ const KW_AMOUNT: KWEntry[] = [
   ['addebito', 3], ['accredito', 3], ['moviment', 3],
   ['dare', 2], ['avere', 2], ['cifra', 2], ['sum', 2],
   ['valore', 1], ['totale', 1],
-  // "saldo" escluso — è il saldo progressivo
 ]
 const KW_DESC: KWEntry[] = [
-  ['causale', 4], ['descrizione', 4], ['description', 4],
+  ['causale', 4], ['operazione', 4], ['descrizione', 4], ['description', 4],
   ['narration', 3], ['wording', 3], ['descript', 3],
   ['note', 3], ['nota', 3], ['motivo', 3],
   ['riferim', 2], ['detail', 2], ['memo', 2], ['oggetto', 2],
@@ -72,14 +146,19 @@ const KW_DESC: KWEntry[] = [
 ]
 const KW_COUNTERPART: KWEntry[] = [
   ['controparte', 4], ['beneficiar', 4], ['ordinante', 4],
-  ['merchant', 3], ['intestat', 3], ['payee', 3],
+  ['merchant', 3], ['intestat', 3], ['payee', 3], ['movimento', 3],
   ['destinat', 2], ['mittent', 2], ['creditore', 2], ['debitore', 2],
-  ['nome', 1],
+  ['dettagli', 2], ['nome', 1],
 ]
 const KW_PAYMENT_METHOD: KWEntry[] = [
   ['metodo pagamento', 4], ['payment method', 4],
   ['modalita', 3], ['tipo pagam', 3],
   ['canale', 2], ['channel', 2], ['tipo operaz', 2],
+]
+const KW_BANK_CAT: KWEntry[] = [
+  ['categoria', 4], ['category', 4],
+  ['tipo spesa', 3], ['classificazione', 3],
+  ['tag', 2],
 ]
 
 function scoreField(header: string, keywords: KWEntry[]): number {
@@ -102,15 +181,18 @@ const DATE_PATTERN = /^\d{1,4}[\/\-\.]\d{1,2}([\/\-\.]\d{2,4})?/
 const isDateLike = (v: string) =>
   DATE_PATTERN.test(v.trim()) || /^\d{4}-\d{2}-\d{2}/.test(v.trim())
 
-// isAmountLike: usa la stessa logica di parseAmount per essere coerente
-// ed esclude esplicitamente pattern simili a date
+// isAmountLike: identica logica di parseAmount (include strip EUR/USD)
 const isAmountLike = (v: string): boolean => {
   const trimmed = v.trim()
   if (!trimmed) return false
-  // Esclude valori simili a date (es. "11/03/2026", "11.03.2026")
+  // Esclude valori simili a date prima del parsing numerico
   if (DATE_PATTERN.test(trimmed)) return false
 
   let s = trimmed.replace(/[€$£\s]/g, '')
+  // Strip codici valuta letterali (EUR, USD ecc.)
+  s = s.replace(/\b(EUR|USD|GBP|CHF|JPY|SEK|NOK|DKK|PLN|CZK|HUF|RON|AUD|CAD)\b/gi, '').trim()
+  if (!s) return false
+
   if (s.endsWith('-')) s = '-' + s.slice(0, -1)
   const lastComma = s.lastIndexOf(',')
   const lastDot   = s.lastIndexOf('.')
@@ -130,11 +212,22 @@ function buildConfidence(kwScore: number, valueMatch: boolean): FieldConfidence 
   return            { level: 'none',     pct: 0,  reason: 'Campo non rilevato automaticamente — selezione manuale richiesta' }
 }
 
-function autoDetect(headers: string[], rows: CSVRow[]): {
+const BANK_CERTAIN: FieldConfidence = {
+  level: 'certain',
+  pct: 98,
+  reason: 'Riconosciuto automaticamente dal formato della tua banca',
+}
+
+function autoDetect(
+  headers: string[],
+  rows: CSVRow[],
+  bankOverrides: Partial<Mapping> = {},
+): {
   mapping: Mapping
   confidence: Record<keyof Mapping, FieldConfidence>
 } {
   type Candidate = { h: string; conf: FieldConfidence }
+  const NONE: FieldConfidence = buildConfidence(0, false)
 
   const rank = (kws: KWEntry[], valueFn?: (v: string) => boolean, exclude: string[] = []): Candidate[] =>
     headers
@@ -146,42 +239,47 @@ function autoDetect(headers: string[], rows: CSVRow[]): {
       })
       .sort((a, b) => b.conf.pct - a.conf.pct)
 
-  const NONE: FieldConfidence = buildConfidence(0, false)
+  // Per ogni campo: usa override da bank format se disponibile, altrimenti scoring
+  const dateH     = bankOverrides.date        ?? (rank(KW_DATE, isDateLike)[0]?.h ?? '')
+  const dateConf  = bankOverrides.date        ? BANK_CERTAIN : (rank(KW_DATE, isDateLike)[0]?.conf ?? NONE)
 
-  const dateCands = rank(KW_DATE, isDateLike)
-  const dateH     = dateCands[0]?.h ?? ''
-  const dateConf  = dateCands[0]?.conf ?? NONE
+  const amtH      = bankOverrides.amount      ?? (rank(KW_AMOUNT, isAmountLike, [dateH])[0]?.h ?? '')
+  const amtConf   = bankOverrides.amount      ? BANK_CERTAIN : (rank(KW_AMOUNT, isAmountLike, [dateH])[0]?.conf ?? NONE)
 
-  const amtCands  = rank(KW_AMOUNT, isAmountLike, [dateH])
-  const amountH   = amtCands[0]?.h ?? ''
-  const amountConf = amtCands[0]?.conf ?? NONE
+  const descH     = bankOverrides.description ?? (rank(KW_DESC, undefined, [dateH, amtH])[0]?.h ?? '')
+  const descConf  = bankOverrides.description ? BANK_CERTAIN : (rank(KW_DESC, undefined, [dateH, amtH])[0]?.conf ?? NONE)
 
-  const descCands = rank(KW_DESC, undefined, [dateH, amountH])
-  const descH     = descCands[0]?.h ?? ''
-  const descConf  = descCands[0]?.conf ?? NONE
+  const cpRaw     = rank(KW_COUNTERPART, undefined, [dateH, amtH, descH])
+  const cpH       = bankOverrides.counterpart ?? ((cpRaw[0]?.conf.pct ?? 0) > 0 ? cpRaw[0]!.h : '')
+  const cpConf: FieldConfidence = bankOverrides.counterpart
+    ? BANK_CERTAIN
+    : (cpH ? cpRaw[0]!.conf : { level: 'none', pct: 0, reason: 'Campo opzionale — seleziona se presente nel file' })
 
-  const cpCands   = rank(KW_COUNTERPART, undefined, [dateH, amountH, descH])
-  const cpH       = (cpCands[0]?.conf.pct ?? 0) > 0 ? cpCands[0]!.h : ''
-  const cpConf: FieldConfidence = cpH
-    ? cpCands[0]!.conf
-    : { level: 'none', pct: 0, reason: 'Campo opzionale — seleziona se presente nel file' }
+  const pmRaw     = rank(KW_PAYMENT_METHOD, undefined, [dateH, amtH, descH, cpH])
+  const pmH       = bankOverrides.paymentMethod ?? ((pmRaw[0]?.conf.pct ?? 0) > 0 ? pmRaw[0]!.h : '')
+  const pmConf: FieldConfidence = bankOverrides.paymentMethod
+    ? BANK_CERTAIN
+    : (pmH ? pmRaw[0]!.conf : { level: 'none', pct: 0, reason: 'Nessuna colonna rilevata — il metodo sarà auto-rilevato dal testo della transazione' })
 
-  const pmCands   = rank(KW_PAYMENT_METHOD, undefined, [dateH, amountH, descH, cpH])
-  const pmH       = (pmCands[0]?.conf.pct ?? 0) > 0 ? pmCands[0]!.h : ''
-  const pmConf: FieldConfidence = pmH
-    ? pmCands[0]!.conf
-    : { level: 'none', pct: 0, reason: 'Nessuna colonna rilevata — il metodo resterà vuoto e sarà assegnabile riga per riga in revisione' }
+  const bcRaw     = rank(KW_BANK_CAT, undefined, [dateH, amtH, descH, cpH, pmH])
+  const bcH       = bankOverrides.bankCategory ?? ((bcRaw[0]?.conf.pct ?? 0) > 0 ? bcRaw[0]!.h : '')
+  const bcConf: FieldConfidence = bankOverrides.bankCategory
+    ? BANK_CERTAIN
+    : (bcH ? { ...bcRaw[0]!.conf, reason: 'Categoria della banca — usata per auto-categorizzare le transazioni importate' }
+           : { level: 'none', pct: 0, reason: "Campo opzionale — se presente permette l'auto-categorizzazione" })
+
 
   return {
-    mapping:    { date: dateH, amount: amountH, description: descH, counterpart: cpH, paymentMethod: pmH },
-    confidence: { date: dateConf, amount: amountConf, description: descConf, counterpart: cpConf, paymentMethod: pmConf },
+    mapping:    { date: dateH, amount: amtH, description: descH, counterpart: cpH, paymentMethod: pmH, bankCategory: bcH },
+    confidence: { date: dateConf, amount: amtConf, description: descConf, counterpart: cpConf, paymentMethod: pmConf, bankCategory: bcConf },
   }
 }
 
-// ── Formattazione importo per preview (stessa logica di parseAmount) ──
+// ── Formattazione importo per preview ──────────────────────────
 function fmtAmount(raw: string) {
   if (!raw?.trim()) return <span style={{ color: 'var(--fg-subtle)' }}>—</span>
   let s = raw.trim().replace(/[€$£\s]/g, '')
+  s = s.replace(/\b(EUR|USD|GBP|CHF|JPY|SEK|NOK|DKK|PLN|CZK|HUF|RON|AUD|CAD)\b/gi, '').trim()
   if (s.endsWith('-')) s = '-' + s.slice(0, -1)
   const lastComma = s.lastIndexOf(',')
   const lastDot   = s.lastIndexOf('.')
@@ -191,14 +289,13 @@ function fmtAmount(raw: string) {
   const n = parseFloat(s)
   if (isNaN(n)) return <span style={{ color: 'var(--fg-muted)' }}>{raw}</span>
   const abs = Math.abs(n)
-  // Gestisce zero negativo
   const isNeg = n < 0 && abs > 0
   return isNeg
     ? <span className="text-[var(--expense)] font-bold">−{abs.toFixed(2)} €</span>
     : <span className="text-[var(--income)] font-bold">+{abs.toFixed(2)} €</span>
 }
 
-// ── ConfidenceBadge — definito FUORI dal componente per evitare re-mount ──
+// ── ConfidenceBadge — fuori dal componente per evitare re-mount ─
 const ConfidenceBadge = memo(({ conf }: { conf: FieldConfidence }) => {
   const cfg = {
     certain:  { label: '✓ Certo',    cls: 'bg-[var(--income-dim)] text-[var(--income)]' },
@@ -214,7 +311,7 @@ const ConfidenceBadge = memo(({ conf }: { conf: FieldConfidence }) => {
 })
 ConfidenceBadge.displayName = 'ConfidenceBadge'
 
-// ── ColSelect — definito FUORI dal componente ──────────────────
+// ── ColSelect — fuori dal componente ────────────────────────────
 interface ColSelectProps {
   field:    keyof Mapping
   label:    string
@@ -276,8 +373,9 @@ export default function ImportPage() {
   const [dragging, setDragging]     = useState(false)
   const [data, setData]             = useState<CSVRow[]>([])
   const [headers, setHeaders]       = useState<string[]>([])
+  const [bankFormat, setBankFormat] = useState<BankFormat>('generic')
   const [mapping, setMapping]       = useState<Mapping>({
-    date: '', amount: '', description: '', counterpart: '', paymentMethod: '',
+    date: '', amount: '', description: '', counterpart: '', paymentMethod: '', bankCategory: '',
   })
   const [confidence, setConfidence] = useState<Record<keyof Mapping, FieldConfidence>>({
     date:          { level: 'none', pct: 0, reason: '' },
@@ -285,19 +383,20 @@ export default function ImportPage() {
     description:   { level: 'none', pct: 0, reason: '' },
     counterpart:   { level: 'none', pct: 0, reason: '' },
     paymentMethod: { level: 'none', pct: 0, reason: '' },
+    bankCategory:  { level: 'none', pct: 0, reason: '' },
   })
-  const [parseWarnings, setParseWarnings] = useState<string[]>([])
-  const [accounts, setAccounts]     = useState<{id:string; name:string; type:string}[]>([])
-  const [accountId, setAccountId]   = useState('')
-  const [isImporting, setIsImporting] = useState(false)
-  const [result, setResult]         = useState<{
+  const [parseWarnings, setParseWarnings]   = useState<string[]>([])
+  const [accounts, setAccounts]             = useState<{id:string; name:string; type:string}[]>([])
+  const [accountId, setAccountId]           = useState('')
+  const [isImporting, setIsImporting]       = useState(false)
+  const [result, setResult]                 = useState<{
     success: boolean; importedCount: number; duplicateCount: number; errors: string[]
   }|null>(null)
 
   // Storico import
-  const [history, setHistory]           = useState<ImportBatchSummary[]>([])
-  const [historyLoading, setHistoryLoading] = useState(false)
-  const [deletingBatch, setDeletingBatch]   = useState<string|null>(null)
+  const [history, setHistory]                   = useState<ImportBatchSummary[]>([])
+  const [historyLoading, setHistoryLoading]     = useState(false)
+  const [deletingBatch, setDeletingBatch]       = useState<string|null>(null)
 
   const loadHistory = async () => {
     setHistoryLoading(true)
@@ -334,26 +433,61 @@ export default function ImportPage() {
     if (f.size > 10 * 1024 * 1024) { alert('File troppo grande. Max 10 MB.'); return }
     setFile(f)
     setParseWarnings([])
-    Papa.parse(f, {
-      header:         true,
-      skipEmptyLines: true,
-      complete: (res) => {
-        const rows = res.data as CSVRow[]
-        if (rows.length === 0) { alert('Il CSV non contiene righe dati.'); return }
 
-        // Avvisa se PapaParse ha trovato errori (es. righe malformate)
-        if (res.errors.length > 0) {
-          const msgs = res.errors.slice(0, 3).map(e => `Riga ${e.row ?? '?'}: ${e.message}`)
-          if (res.errors.length > 3) msgs.push(`…e altri ${res.errors.length - 3} avvisi`)
-          setParseWarnings(msgs)
+    // Parsing raw senza header per trovare la riga header reale
+    // (le banche italiane hanno spesso 4-21 righe di metadati prima degli header)
+    Papa.parse(f, {
+      header:         false,
+      skipEmptyLines: false,
+      complete: (rawRes) => {
+        const allRows = rawRes.data as string[][]
+
+        // Trova la riga con gli header reali
+        const headerIdx = findHeaderRow(allRows)
+
+        // Costruisci headers (trim spazi, salta colonne senza nome)
+        const rawHeaders = allRows[headerIdx]?.map(h => h.trim()) ?? []
+
+        // Costruisci righe dati come CSVRow
+        const dataRows: CSVRow[] = allRows
+          .slice(headerIdx + 1)
+          .filter(row => row.some(c => c.trim()))
+          .map(row => {
+            const obj: CSVRow = {}
+            rawHeaders.forEach((h, i) => {
+              if (h) {
+                // Normalizza newline interni (es. IBAN su riga separata nel CSV)
+                obj[h] = (row[i] ?? '').replace(/[\r\n]+/g, ' ').trim()
+              }
+            })
+            return obj
+          })
+          .filter(obj => Object.values(obj).some(v => v.length > 0))
+
+        if (dataRows.length === 0) {
+          alert('Il CSV non contiene righe dati leggibili. Verifica che il file non sia vuoto.')
+          return
         }
 
-        const hdrs = res.meta.fields ?? []
-        const { mapping: m, confidence: c } = autoDetect(hdrs, rows)
-        setData(rows)
+        // Avvisa di errori PapaParse (righe malformate)
+        if (rawRes.errors.length > 0) {
+          const msgs = rawRes.errors
+            .filter(e => e.row !== undefined && e.row > headerIdx)
+            .slice(0, 3)
+            .map(e => `Riga ${(e.row ?? 0) + 1}: ${e.message}`)
+          if (msgs.length > 0) setParseWarnings(msgs)
+        }
+
+        const hdrs = rawHeaders.filter(Boolean)
+        const fmt  = detectBankFormat(hdrs)
+        const bankOverrides = getBankAutoMapping(fmt, hdrs)
+        const { mapping: autoM, confidence: autoC } = autoDetect(hdrs, dataRows, bankOverrides)
+
+        setData(dataRows)
         setHeaders(hdrs)
-        setMapping(m)
-        setConfidence(c)
+        setBankFormat(fmt)
+        setMapping(autoM)
+        setConfidence(autoC)
         setStep(2)
       },
       error: (err) => {
@@ -385,8 +519,9 @@ export default function ImportPage() {
         date:          row[mapping.date]          ?? '',
         amount:        row[mapping.amount]        ?? '',
         description:   row[mapping.description]  ?? '',
-        payee:         mapping.counterpart   ? row[mapping.counterpart]   : undefined,
-        paymentMethod: mapping.paymentMethod ? row[mapping.paymentMethod] : undefined,
+        payee:         mapping.counterpart    ? row[mapping.counterpart]    : undefined,
+        paymentMethod: mapping.paymentMethod  ? row[mapping.paymentMethod]  : undefined,
+        bankCategory:  mapping.bankCategory   ? row[mapping.bankCategory]   : undefined,
       }))
       const res = await processImport(payload, { accountId, fileName: file?.name })
       setResult(res)
@@ -401,16 +536,16 @@ export default function ImportPage() {
   const reset = () => {
     setStep(1); setFile(null); setData([]); setHeaders([])
     setParseWarnings([])
-    setMapping({ date: '', amount: '', description: '', counterpart: '', paymentMethod: '' })
+    setBankFormat('generic')
+    setMapping({ date: '', amount: '', description: '', counterpart: '', paymentMethod: '', bankCategory: '' })
     setResult(null)
   }
 
-  // Sample della prima riga per preview nei select
   const firstRowSample = data[0] ?? {}
 
-  // Conta campi obbligatori non certi
   const mandatoryFields: (keyof Mapping)[] = ['date', 'amount', 'description']
   const warningCount = mandatoryFields.filter(f => confidence[f].level !== 'certain').length
+  const hasBankCat = !!mapping.bankCategory || confidence.bankCategory.level !== 'none'
 
   // ── STEP 1: Upload ──────────────────────────────────────────
   const renderStep1 = () => (
@@ -436,8 +571,12 @@ export default function ImportPage() {
         <h3 className="text-xl font-display font-bold mb-2" style={{ color: 'var(--fg-primary)' }}>
           {dragging ? 'Rilascia il file qui' : 'Trascina il CSV oppure clicca'}
         </h3>
-        <p className="text-sm mb-1" style={{ color: 'var(--fg-muted)' }}>CSV delle principali banche italiane ed europee</p>
-        <p className="text-xs" style={{ color: 'var(--fg-subtle)' }}>Date: gg/mm/aaaa o aaaa-mm-gg · Importi: formato europeo o US · Max 10 MB</p>
+        <p className="text-sm mb-1" style={{ color: 'var(--fg-muted)' }}>
+          Rileva automaticamente il formato di BancoBPM, Sella e altre banche italiane
+        </p>
+        <p className="text-xs" style={{ color: 'var(--fg-subtle)' }}>
+          Salta le righe di intestazione · Categorie banca → auto-categorizzazione · Max 10 MB
+        </p>
         <input type="file" accept=".csv,.txt" id="csv-upload" className="hidden" onChange={handleFileInput} />
       </div>
 
@@ -461,7 +600,7 @@ export default function ImportPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {['Intesa Sanpaolo', 'UniCredit', 'Fineco', 'N26 · Revolut'].map(b => (
+        {['BancoBPM / Webank', 'Banca Sella', 'Fineco', 'N26 · Revolut'].map(b => (
           <div key={b} className="p-3 rounded-xl border border-[var(--border-subtle)] text-center">
             <p className="text-xs font-bold" style={{ color: 'var(--fg-muted)' }}>{b}</p>
           </div>
@@ -473,6 +612,22 @@ export default function ImportPage() {
   // ── STEP 2: Mapping ─────────────────────────────────────────
   const renderStep2 = () => (
     <div className="space-y-8 animate-in slide-in-from-right-6 duration-400">
+
+      {/* Banner formato banca rilevato */}
+      {bankFormat !== 'generic' && (
+        <div className="flex items-center gap-3 p-3 rounded-2xl border"
+          style={{ background: 'var(--accent-dim)', borderColor: 'rgba(var(--accent-rgb),0.3)' }}>
+          <Sparkles size={15} className="shrink-0" style={{ color: 'var(--accent)' }} />
+          <div>
+            <p className="text-xs font-bold" style={{ color: 'var(--accent)' }}>
+              Formato banca rilevato: {BANK_FORMAT_LABEL[bankFormat]}
+            </p>
+            <p className="text-[10px] mt-0.5" style={{ color: 'var(--fg-muted)' }}>
+              La mappatura colonne è stata precompilata automaticamente. Verifica e procedi.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Avvisi PapaParse */}
       {parseWarnings.length > 0 && (
@@ -505,8 +660,8 @@ export default function ImportPage() {
           </p>
           <p className="text-xs mt-0.5" style={{ color: 'var(--fg-muted)' }}>
             {warningCount === 0
-              ? 'Controlla comunque la mappatura e correggi se necessario prima di procedere.'
-              : 'I campi marcati ⚠ sono stati ipotizzati o non rilevati — la motivazione è indicata sotto ogni campo. Verifica e correggi prima di procedere.'
+              ? 'Controlla la mappatura e procedi — è possibile modificare prima di importare.'
+              : 'I campi marcati ⚠ sono stati ipotizzati o non rilevati. Verifica e correggi prima di procedere.'
             }
           </p>
         </div>
@@ -526,18 +681,50 @@ export default function ImportPage() {
       {/* Campi opzionali */}
       <div>
         <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: 'var(--fg-subtle)' }}>Campi Opzionali</p>
-        <p className="text-[10px] mb-4" style={{ color: 'var(--fg-subtle)' }}>Seleziona se presenti nel file</p>
+        <p className="text-[10px] mb-4" style={{ color: 'var(--fg-subtle)' }}>Seleziona se presenti nel file — migliorano la qualità dei dati importati</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ColSelect field="counterpart"   label="Controparte"          conf={confidence.counterpart}   value={mapping.counterpart}   headers={headers} sample={firstRowSample} onChange={handleMappingChange} />
-          <ColSelect field="paymentMethod" label="Metodo di Pagamento"  conf={confidence.paymentMethod} value={mapping.paymentMethod} headers={headers} sample={firstRowSample} onChange={handleMappingChange} />
+          <ColSelect field="counterpart"   label="Controparte / Dettagli" conf={confidence.counterpart}   value={mapping.counterpart}   headers={headers} sample={firstRowSample} onChange={handleMappingChange} />
+          <ColSelect field="paymentMethod" label="Metodo di Pagamento"    conf={confidence.paymentMethod} value={mapping.paymentMethod} headers={headers} sample={firstRowSample} onChange={handleMappingChange} />
         </div>
+
+        {/* Categoria banca — campo speciale con spiegazione */}
+        <div className="mt-4">
+          <div className={cn(
+            "p-4 rounded-2xl border",
+            hasBankCat ? "border-[var(--accent)]/30 bg-[var(--accent-dim)]" : "border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
+          )}>
+            <div className="flex items-center gap-2 mb-3">
+              <Tag size={14} style={{ color: hasBankCat ? 'var(--accent)' : 'var(--fg-subtle)' }} />
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: hasBankCat ? 'var(--accent)' : 'var(--fg-subtle)' }}>
+                Categoria Banca → Auto-categorizzazione
+              </p>
+              {hasBankCat && (
+                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-[var(--accent)] text-[var(--accent-on)]">ATTIVO</span>
+              )}
+            </div>
+            <ColSelect
+              field="bankCategory"
+              label="Colonna categoria della banca"
+              conf={confidence.bankCategory}
+              value={mapping.bankCategory}
+              headers={headers}
+              sample={firstRowSample}
+              onChange={handleMappingChange}
+            />
+            <p className="text-[10px] mt-2 leading-relaxed" style={{ color: 'var(--fg-muted)' }}>
+              <span className="font-bold">Alcune banche (es. BancoBPM)</span> includono una colonna con le loro categorie
+              (Generi alimentari, Ristoranti e bar, Carburanti…).
+              Selezionandola, il sistema proverà ad assegnarle automaticamente alle tue categorie durante l'import.
+            </p>
+          </div>
+        </div>
+
         <div className="mt-3 flex items-start gap-2 p-3 rounded-xl" style={{ background: 'var(--bg-elevated)' }}>
           <Info size={13} className="shrink-0 mt-0.5" style={{ color: 'var(--fg-subtle)' }} />
           <p className="text-[10px] leading-relaxed" style={{ color: 'var(--fg-muted)' }}>
             <span className="font-bold">Metodo di pagamento:</span>{' '}
-            uno stesso estratto conto può contenere carta, bonifico, contanti e PayPal.
-            Se la banca esporta il metodo come colonna, mappalo qui e sarà assegnato riga per riga.
-            Altrimenti resterà vuoto e potrai compilarlo in revisione transazione per transazione.
+            se la banca non ha una colonna dedicata, il sistema prova a rilevarlo automaticamente dal testo
+            della transazione (es. "PAGAMENTO CON CARTA" → Carta di Debito, "BONIFICO ESEGUITO" → Bonifico).
           </p>
         </div>
       </div>
@@ -600,10 +787,7 @@ export default function ImportPage() {
     const preview    = data.slice(0, 15)
     const selAcc     = accounts.find(a => a.id === accountId)
     const hasCp      = !!mapping.counterpart
-    const hasPM      = !!mapping.paymentMethod
-    const pmColLabel = hasPM
-      ? `Da colonna ${colLetter(headers.indexOf(mapping.paymentMethod))} (per riga)`
-      : 'Vuoto — da assegnare in revisione'
+    const hasBankCatCol = !!mapping.bankCategory
 
     return (
       <div className="space-y-6 animate-in slide-in-from-right-6 duration-400">
@@ -611,8 +795,8 @@ export default function ImportPage() {
           {[
             { label: 'Righe totali',       val: data.length.toString() },
             { label: 'Conto destinazione', val: selAcc?.name ?? '—' },
-            { label: 'Metodo pagamento',   val: pmColLabel },
-            { label: 'Stato iniziale',     val: 'STAGED (da verificare)' },
+            { label: 'Formato banca',      val: bankFormat !== 'generic' ? BANK_FORMAT_LABEL[bankFormat] : 'Generico' },
+            { label: 'Auto-categoriz.',    val: hasBankCatCol ? 'Attiva (categoria banca)' : 'Dal testo (metodo pag.)' },
           ].map(({ label, val }) => (
             <div key={label} className="p-3 rounded-2xl border" style={{ borderColor: 'var(--border-subtle)', background: 'var(--bg-elevated)' }}>
               <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--fg-subtle)' }}>{label}</p>
@@ -626,7 +810,7 @@ export default function ImportPage() {
             <table className="w-full text-left text-sm">
               <thead className="sticky top-0" style={{ background: 'var(--bg-elevated)' }}>
                 <tr>
-                  {['#', 'Data', 'Descrizione', hasCp ? 'Controparte' : null, 'Importo'].filter(Boolean).map(h => (
+                  {['#', 'Data', 'Descrizione', hasCp ? 'Controparte' : null, hasBankCatCol ? 'Cat. Banca' : null, 'Importo'].filter(Boolean).map(h => (
                     <th key={h!} className="px-4 py-3 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--fg-muted)' }}>{h}</th>
                   ))}
                 </tr>
@@ -640,6 +824,11 @@ export default function ImportPage() {
                     {hasCp && (
                       <td className="px-4 py-3 text-xs max-w-[120px] truncate" style={{ color: 'var(--fg-muted)' }}>
                         {row[mapping.counterpart] || '—'}
+                      </td>
+                    )}
+                    {hasBankCatCol && (
+                      <td className="px-4 py-3 text-xs max-w-[100px] truncate" style={{ color: 'var(--accent)' }}>
+                        {row[mapping.bankCategory] || '—'}
                       </td>
                     )}
                     <td className="px-4 py-3 font-mono font-bold whitespace-nowrap">
@@ -788,7 +977,7 @@ export default function ImportPage() {
             Importa CSV
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--fg-muted)' }}>
-            Rilevamento intelligente · Riferimenti Excel A/B/C · Metodo per riga · Anti-duplicati
+            Rileva formato banca · Salta righe metadati · Auto-categorizzazione · Metodo pagamento automatico
           </p>
         </div>
 

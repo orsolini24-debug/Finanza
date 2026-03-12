@@ -15,17 +15,72 @@ interface CategoryManagerProps {
 }
 
 const EMOJI_OPTIONS = [
-  '🛒', '🛍️', '🍲', '🏥', '🎬', '🚗', '💡', '🏠', '💰', '📈', '🔄', '📦', '✈️', '📚', '💪', '📱',
-  '☕', '🍕', '🍷', '🚌', '🚕', '⛽', '🎁', '🎮', '⚽', '🎨', '👔', '👠', '🍼', '🐶', '🌿', '🛠️'
+  // Popolari e Generiche
+  '🛒', '🛍️', '🍲', '🏥', '🎬', '🚗', '💡', '🏠', '💰', '📈', '🔄', '📦', '✈️', '📚', '💪', '📱', '🎁', '🔌', '🔋', '📁', '✉️', '📞', '🛠️',
+  // Cibo e Drink
+  '☕', '🍕', '🍷', '🍣', '🍔', '🍦', '🍰', '🍹', '🍺', '🥖', '🍎', '🍳', '🥗', '🍩', '🥐', '🍗', '🍜', '🍱', '🥨', '🍪', '🥤', '🥞', '🥓', '🥩', '🧀',
+  // Trasporti e Viaggi
+  '🚲', '🛴', '🛵', '🚆', '🚌', '🚕', '🚇', '🚢', '✈️', '🏨', '🏖️', '🏔️', '🗺️', '🎫', '⛽', '🛣️', '🅿️', '🚉', '🚠', '🛶', '🧳', '🛂', '🎡', '🎢',
+  // Casa e Famiglia
+  '🛋️', '🪴', '🏗️', '🧹', '🧼', '🧴', '🚿', '🧺', '🔑', '🔒', '🍼', '🧸', '🧒', '👴', '👵', '👫', '🏡', '🛌', '🪑', '🧯', '🔨', '🪛', '🔧', '🔌', '🧱',
+  // Salute e Sport
+  '💊', '🦷', '👓', '🧘', '⚽', '🏀', '🎾', '🚴', '🏊', '🏐', '🥊', '🎿', '⛸️', '🏸', '🏃', '🥾', '🏋️', '⛳', '🏄', '🛹', '🏹', '🎣', '🧗', '🚵',
+  // Svago e Hobby
+  '🍿', '🎮', '🎭', '🎸', '🎨', '📸', '🎹', '🎻', '🎤', '🎲', '🧩', '🧵', '🧶', '🌳', '🔭', '♟️', '🎷', '🎺', '🎧', '📻', '📺', '🎥', '🃏', '🎪',
+  // Lavoro e Finanza
+  '💻', '📄', '📠', '💼', '📊', '📉', '💳', '🏧', '⚖️', '💸', '💎', '₿', '🏦', '📮', '💵', '🪙', '🛡️', '🔓', '📣', '🖨️', '🖋️', '📒',
+  // Animali e Altro
+  '🐶', '🐱', '🐰', '🐹', '🦜', '🐴', '🌿', '💐', '🌻', '🔥', '💧', '🌐', '💅', '💇', '🧖', '✨', '🎂', '🎉', '💍', '⛪', '🕌', '🕍', '🕯️', '⚰️', '🧿', '🍀'
 ]
 
 const EMOJI_MAP: Record<string, string> = {
-  'Spesa': '🛒', 'Supermercato': '🛒', 'Shopping': '🛍️', 'Cibo': '🍲', 'Ristorante': '🍲',
-  'Salute': '🏥', 'Medicina': '🏥', 'Intrattenimento': '🎬', 'Cinema': '🎬', 'Trasporti': '🚗',
-  'Auto': '🚗', 'Utenze': '💡', 'Luce': '💡', 'Gas': '💡', 'Casa': '🏠', 'Affitto': '🏠',
-  'Stipendio': '💰', 'Bonus': '💰', 'Investimenti': '📈', 'Azioni': '📈', 'Trasferimento': '🔄',
-  'Altro': '📦', 'Viaggi': '✈️', 'Aereo': '✈️', 'Istruzione': '📚', 'Scuola': '📚',
-  'Palestra': '💪', 'Sport': '💪', 'Abbonamenti': '📱', 'Netflix': '📱', 'Amazon': '🛍️',
+  // Spesa e Alimentari
+  'Spesa': '🛒', 'Supermercato': '🛒', 'Alimentari': '🛒', 'Lidl': '🛒', 'Conad': '🛒', 'Coop': '🛒', 'Esselunga': '🛒', 'Carrefour': '🛒', 'Penny': '🛒', 'MD': '🛒', 'Eurospin': '🛒', 'Pam': '🛒', 'Despar': '🛒', 'Gigante': '🛒',
+  'Panificio': '🥖', 'Pane': '🥖', 'Pasticceria': '🍰', 'Dolci': '🍩', 'Frutta': '🍎', 'Verdura': '🥗', 'Macelleria': '🥩', 'Pescheria': '🐟', 'Latte': '🥛', 'Uova': '🥚', 'Gastronomia': '🍱', 'Mercato': '🧺', 'Colazione': '🍳', 'Pranzo': '🍲', 'Cena': '🍲',
+  
+  // Shopping e Abbigliamento
+  'Shopping': '🛍️', 'Amazon': '🛍️', 'Vestiti': '👔', 'Abbigliamento': '👔', 'Scarpe': '👠', 'Regalo': '🎁', 'Zalando': '🛍️', 'Shein': '🛍️', 'Temu': '🛍️', 'H&M': '👔', 'Zara': '👔', 'Uniqlo': '👔', 'Nike': '👟', 'Adidas': '👟',
+  'Elettronica': '🔌', 'Mediaworld': '🔌', 'Unieuro': '🔌', 'Apple': '📱', 'Samsung': '📱', 'Hardware': '💻', 'Software': '💿', 'Gadget': '🕹️', 'Batterie': '🔋',
+  'Libri': '📚', 'Libreria': '📚', 'Mondadori': '📚', 'Feltrinelli': '📚', 'Cartoleria': '📒',
+  
+  // Cibo e Drink
+  'Cibo': '🍲', 'Ristorante': '🍲', 'Pizzeria': '🍕', 'Sushi': '🍣', 'Fast Food': '🍔', 'McDonald': '🍔', 'Burger King': '🍔', 'KFC': '🍗', 'Poke': '🍱', 'Trattoria': '🍲', 'Osteria': '🍷',
+  'Bar': '☕', 'Caffè': '☕', 'Aperitivo': '🍹', 'Birra': '🍺', 'Vino': '🍷', 'Pub': '🍺', 'Discoteca': '💃', 'Cocktail': '🍹', 'Gusti': '🍦', 'Gelato': '🍦', 'Starbucks': '☕', 'Nespresso': '☕',
+  
+  // Salute e Benessere
+  'Salute': '🏥', 'Medicina': '💊', 'Farmacia': '💊', 'Dentista': '🦷', 'Visita': '🏥', 'Dottore': '🏥', 'Ospedale': '🏥', 'Ottico': '👓', 'Occhiali': '👓', 'Lenti': '👓',
+  'Palestra': '💪', 'Sport': '💪', 'Piscina': '🏊', 'Tennis': '🎾', 'Calcetto': '⚽', 'Yoga': '🧘', 'Crossfit': '💪', 'Padel': '🎾', 'Running': '🏃', 'Corsa': '🏃', 'Calcio': '⚽', 'Basket': '🏀', 'Sci': '🎿', 'Snowboard': '🏂', 'Nuoto': '🏊',
+  'Psicologo': '🧠', 'Terapia': '🧠', 'Massage': '🧖', 'Spa': '🧖', 'Benessere': '✨', 'Estetista': '💅', 'Barbiere': '💇', 'Parrucchiere': '💇',
+  
+  // Trasporti
+  'Trasporti': '🚗', 'Auto': '🚗', 'Benzina': '⛽', 'Carburante': '⛽', 'Diesel': '⛽', 'Parcheggio': '🅿️', 'Pedaggio': '🛣️', 'Autostrada': '🛣️', 'Telepass': '🛣️', 'Bollo': '⚖️', 'Meccanico': '🛠️', 'Revisione': '🛠️', 'Lavaggio': '🚿', 'Assicurazione': '🛡️',
+  'Treno': '🚆', 'Trenitalia': '🚆', 'Italo': '🚆', 'Autobus': '🚌', 'Bus': '🚌', 'Taxi': '🚕', 'Freenow': '🚕', 'Uber': '🚕', 'Metro': '🚇', 'Bicicletta': '🚲', 'Bici': '🚲', 'Monopattino': '🛴', 'Traghetto': '🚢', 'Volo': '✈️', 'Aereo': '✈️',
+  
+  // Casa e Utenze
+  'Casa': '🏠', 'Affitto': '🏠', 'Mutuo': '🏠', 'Condominio': '🏠', 'Arredamento': '🛋️', 'Mobili': '🛋️', 'Ikea': '🛋️', 'Leroy Merlin': '🛠️', 'Brico': '🛠️', 'Casalinghi': '🧺', 'Giardino': '🪴', 'Fiori': '💐',
+  'Utenze': '💡', 'Bolletta': '💡', 'Luce': '💡', 'Enel': '💡', 'Gas': '🔥', 'Acqua': '💧', 'Internet': '🌐', 'Wifi': '🌐', 'Fibra': '🌐', 'Telefono': '📞', 'Mobile': '📱', 'Sky': '📺', 'Dazn': '⚽', 'Disney': '🍿', 'Netflix': '🍿',
+  'Pulizie': '🧹', 'Lavanderia': '🧺', 'Riparazione': '🛠️', 'Manutenzione': '🛠️', 'Idraulico': '🔧', 'Elettricista': '⚡', 'Condizionatore': '❄️',
+  
+  // Intrattenimento e Media
+  'Intrattenimento': '🎬', 'Cinema': '🍿', 'Teatro': '🎭', 'Concerto': '🎸', 'Musica': '🎵', 'Evento': '🎫', 'Stadio': '⚽', 'Mostra': '🎨', 'Museo': '🏛️', 'Spotify': '🎵', 'Audible': '🎧', 'YouTube': '📺',
+  'Gaming': '🎮', 'Playstation': '🎮', 'Xbox': '🎮', 'Nintendo': '🎮', 'Steam': '🎮', 'Giochi': '🎲', 'Scommesse': '🎰', 'Casinò': '🎰',
+  
+  // Viaggi e Vacanze
+  'Viaggi': '✈️', 'Vacanza': '🏖️', 'Spiaggia': '🏖️', 'Mare': '🏖️', 'Montagna': '🏔️', 'Settimana Bianca': '🎿', 'Escursione': '🥾', 'Campeggio': '⛺',
+  'Hotel': '🏨', 'Albergo': '🏨', 'Airbnb': '🏠', 'Booking': '🏨', 'Hostel': '🛌', 'B&B': '🏠', 'Ryanair': '✈️', 'Easyjet': '✈️', 'Lufthansa': '✈️', 'Valigia': '🧳', 'Passaporto': '🛂',
+  
+  // Lavoro e Finanza
+  'Stipendio': '💰', 'Bonus': '💰', 'Premi': '💰', 'Freelance': '💻', 'Fattura': '📄', 'P.IVA': '💼', 'Rimborso': '💸', 'Vendita': '🏷️', 'Dividendi': '💎', 'Trading': '📈', 'Investimenti': '📈',
+  'Banca': '🏦', 'Prestito': '🏦', 'Interessi': '📊', 'Commissioni': '💸', 'Crypto': '₿', 'Bitcoin': '₿', 'Ethereum': 'Ξ', 'Carta': '💳', 'Contanti': '💵', 'Ricarica': '📱',
+  'Tasse': '⚖️', 'Multa': '⚖️', 'Agenzia Entrate': '⚖️', 'IVA': '⚖️', 'IMU': '🏠', 'TARI': '🗑️',
+  
+  // Famiglia e Sociale
+  'Famiglia': '👫', 'Figli': '🧒', 'Bambini': '🧸', 'Scuola': '📚', 'Asilo': '🍼', 'Giocattoli': '🧸', 'Mensa': '🍱', 'Libri Scolastici': '📚', 'Babysitter': '👶',
+  'Genitori': '👴', 'Compleanno': '🎂', 'Matrimonio': '💍', 'Festa': '🎉', 'Beneficenza': '🤝', 'Donazione': '❤️', 'Chiesa': '⛪',
+  
+  // Altro
+  'Altro': '📦', 'Varie': '📦', 'Cura Personale': '🧴', 'Trucchi': '💄', 'Sapone': '🧼', 'Profumeria': '🧖',
+  'Animali': '🐱', 'Cane': '🐶', 'Gatto': '🐱', 'Veterinario': '🏥', 'Croccantini': '🐱', 'Hobby': '🎨', 'Fai da te': '🛠️', 'Tabacco': '🚬', 'Sigarette': '🚬', 'Svapo': '🚬'
 }
 
 function getDisplayIcon(cat: CategoryWithParent) {

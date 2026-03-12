@@ -66,13 +66,13 @@ export default function Sidebar() {
           <Wallet className="text-[var(--accent-on)] relative z-10" size={24} strokeWidth={2.5} />
         </div>
         <div className="flex flex-col">
-          <span className="font-display font-black text-xl tracking-[-0.04em] text-[var(--fg-primary)] leading-none">FINANZA</span>
-          <span className="text-[9px] font-black text-[var(--accent)] uppercase tracking-[0.2em] mt-1 opacity-80">Premium PFOS</span>
+          <span className="font-display font-black text-xl tracking-[-0.04em] text-[var(--accent)] leading-none drop-shadow-sm">FINANZA</span>
+          <span className="text-[9px] font-black text-[var(--fg-muted)] uppercase tracking-[0.2em] mt-1 opacity-80">Premium PFOS</span>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 min-h-0 space-y-1 custom-scrollbar overflow-y-auto pr-1 text-left">
+      <nav className="flex-1 min-h-0 space-y-1.5 custom-scrollbar overflow-y-auto pr-1 text-left">
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/app/dashboard' && pathname.startsWith(item.href));
           const href = monthParam ? `${item.href}?month=${monthParam}` : item.href;
@@ -85,19 +85,22 @@ export default function Sidebar() {
                 className={cn(
                   "flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group w-full outline-none border",
                   isActive
-                    ? "bg-[var(--accent-dim)] border-[var(--sidebar-active-border)] shadow-sm"
-                    : "hover:bg-[var(--bg-elevated)] border-transparent hover:border-[var(--sidebar-border)]"
+                    ? "bg-[var(--bg-surface)] border-[var(--accent)] shadow-lg shadow-[var(--accent-dim)]"
+                    : "hover:bg-[var(--bg-elevated)] border-transparent hover:border-[var(--border-default)]"
                 )}
               >
                 <div className={cn(
                   "w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 border",
                   isActive 
-                    ? "bg-[var(--accent)] text-[var(--accent-on)] border-[var(--accent)] shadow-lg" 
-                    : "bg-transparent group-hover:bg-[var(--bg-surface)] border-transparent group-hover:border-[var(--sidebar-border)] group-hover:shadow-sm"
+                    ? "bg-[var(--accent)] text-[var(--accent-on)] border-[var(--accent)] shadow-md" 
+                    : "bg-[var(--bg-input)] border-[var(--border-default)] group-hover:border-[var(--accent)] group-hover:text-[var(--accent)]"
                 )}>
-                  <Icon size={18} strokeWidth={isActive ? 2.5 : 2} className={cn("transition-transform", isActive ? "scale-100" : "text-[var(--fg-muted)] group-hover:text-[var(--fg-primary)] group-hover:scale-110")} />
+                  <Icon size={18} strokeWidth={isActive ? 3 : 2} className={cn("transition-transform", isActive ? "scale-100" : "text-[var(--fg-muted)] group-hover:text-[var(--accent)] group-hover:scale-110")} />
                 </div>
-                <span className={cn("text-[14px] font-black tracking-tight transition-colors", isActive ? "text-[var(--fg-primary)]" : "text-[var(--fg-muted)] group-hover:text-[var(--fg-primary)]")}>
+                <span className={cn(
+                  "text-[14px] font-black tracking-tight transition-colors", 
+                  isActive ? "text-[var(--fg-primary)]" : "text-[var(--fg-muted)] group-hover:text-[var(--fg-primary)]"
+                )}>
                   {item.name}
                 </span>
                 {isActive && (

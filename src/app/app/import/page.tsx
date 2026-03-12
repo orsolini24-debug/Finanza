@@ -39,8 +39,8 @@ type FieldConfidence = {
 // Formato banca rilevato automaticamente
 type BankFormat = 'sella' | 'bpm' | 'generic'
 const BANK_FORMAT_LABEL: Record<BankFormat, string> = {
-  sella:   'Banca Popolare / Sella / simile',
-  bpm:     'BancoBPM / Webank / simile',
+  sella:   'BBVA / formato Causale+Movimento',
+  bpm:     'Intesa Sanpaolo / formato Operazione+Categoria',
   generic: 'Generico',
 }
 
@@ -600,7 +600,7 @@ export default function ImportPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {['BancoBPM / Webank', 'Banca Sella', 'Fineco', 'N26 · Revolut'].map(b => (
+        {['BBVA', 'Intesa Sanpaolo', 'Fineco', 'N26 · Revolut'].map(b => (
           <div key={b} className="p-3 rounded-xl border border-[var(--border-subtle)] text-center">
             <p className="text-xs font-bold" style={{ color: 'var(--fg-muted)' }}>{b}</p>
           </div>

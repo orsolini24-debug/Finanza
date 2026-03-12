@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Calendar, CalendarDays } from 'lucide-react'
 import { formatMonthLabel, getCurrentMonth } from '@/lib/period'
 import { cn } from '@/lib/utils'
@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 export default function PeriodPicker() {
   const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const [showDays, setShowDays] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -22,7 +23,9 @@ export default function PeriodPicker() {
     const params = new URLSearchParams(searchParams.toString())
     if (value) params.set(key, value)
     else params.delete(key)
-    router.push(`?${params.toString()}`)
+    
+    const query = params.toString()
+    router.push(`${pathname}${query ? `?${query}` : ''}`)
   }
 
   const handlePrev = () => {

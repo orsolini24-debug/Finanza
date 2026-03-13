@@ -31,7 +31,7 @@ export function ReportsClient({ historyData, topCategories }: ReportsClientProps
     },
     grid: { left: '3%', right: '3%', bottom: '3%', top: '15%', containLabel: true },
     xAxis: { type: 'category', data: historyData.map(d => d.name), axisLabel: { color: 'var(--fg-subtle)', fontWeight: 700 }, axisLine: { show: false }, axisTick: { show: false } },
-    yAxis: { type: 'value', axisLabel: { color: 'var(--fg-subtle)', formatter: (v: number) => '€' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v) }, splitLine: { lineStyle: { type: 'dashed', color: 'var(--border-subtle)', opacity: 0.6 } } },
+    yAxis: { type: 'value', axisLabel: { color: 'var(--fg-subtle)', formatter: (v: number) => '€' + (v >= 1000 ? (v/1000 % 1 === 0 ? (v/1000).toFixed(0) : (v/1000).toFixed(1)) + 'k' : v) }, splitLine: { lineStyle: { type: 'dashed', color: 'var(--border-subtle)', opacity: 0.6 } } },
     series: [
       {
         name: 'Entrate', type: 'bar', data: historyData.map(d => d.income), barMaxWidth: 40,
@@ -58,7 +58,7 @@ export function ReportsClient({ historyData, topCategories }: ReportsClientProps
     },
     grid: { left: '3%', right: '3%', bottom: '3%', top: '15%', containLabel: true },
     xAxis: { type: 'category', data: historyData.map(d => d.name), axisLabel: { color: 'var(--fg-subtle)', fontWeight: 700 }, axisLine: { show: false }, axisTick: { show: false } },
-    yAxis: { type: 'value', axisLabel: { color: 'var(--fg-subtle)', formatter: (v: number) => '€' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v) }, splitLine: { lineStyle: { type: 'dashed', color: 'var(--border-subtle)', opacity: 0.6 } } },
+    yAxis: { type: 'value', axisLabel: { color: 'var(--fg-subtle)', formatter: (v: number) => '€' + (v >= 1000 ? (v/1000 % 1 === 0 ? (v/1000).toFixed(0) : (v/1000).toFixed(1)) + 'k' : v) }, splitLine: { lineStyle: { type: 'dashed', color: 'var(--border-subtle)', opacity: 0.6 } } },
     series: [{
       name: 'Risparmio', type: 'line', smooth: true,
       data: historyData.map(d => d.savings),
@@ -80,7 +80,7 @@ export function ReportsClient({ historyData, topCategories }: ReportsClientProps
       formatter: (p: any) => `${p.name}: €${Number(p.value).toLocaleString('it-IT', { minimumFractionDigits: 2 })}`
     },
     grid: { left: '20%', right: '5%', top: '5%', bottom: '5%', containLabel: true },
-    xAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: 'var(--border-subtle)', opacity: 0.6 } }, axisLabel: { formatter: (v: number) => '€' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v), color: 'var(--fg-subtle)' } },
+    xAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: 'var(--border-subtle)', opacity: 0.6 } }, axisLabel: { formatter: (v: number) => '€' + (v >= 1000 ? (v/1000 % 1 === 0 ? (v/1000).toFixed(0) : (v/1000).toFixed(1)) + 'k' : v), color: 'var(--fg-subtle)' } },
     yAxis: { type: 'category', data: topCategories.map(c => c.name), axisLabel: { color: 'var(--fg-primary)', fontWeight: 700 }, axisLine: { show: false }, axisTick: { show: false } },
     series: [{
       type: 'bar', data: topCategories.map((c, i) => ({

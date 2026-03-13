@@ -104,7 +104,7 @@ export default function PeriodPicker() {
   }, [showDays, currentDay])
 
   return (
-    <div className="relative flex flex-col items-end gap-2">
+    <div className="relative flex flex-col items-end gap-2" style={{ isolation: 'isolate' }}>
       {/* Mode Selector */}
       <div className="flex items-center gap-1 p-1 bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-xl self-end">
         {(['month', 'quarter', 'year'] as PeriodMode[]).map(mode => (
@@ -147,17 +147,16 @@ export default function PeriodPicker() {
           </button>
           
           <button 
-            onClick={() => { if (currentPeriod === 'month') { setShowMonths(!showMonths); setShowDays(false); } }}
+            onClick={() => { setShowMonths(!showMonths); setShowDays(false); }}
             className={cn(
               "px-4 flex items-center gap-2 min-w-[120px] justify-center transition-colors font-black uppercase tracking-tight text-[13px]",
-              showMonths ? "text-[var(--accent)]" : "text-[var(--fg-primary)] hover:text-[var(--accent)]",
-              currentPeriod !== 'month' && "cursor-default"
+              showMonths ? "text-[var(--accent)]" : "text-[var(--fg-primary)] hover:text-[var(--accent)]"
             )}
           >
             {currentPeriod === 'quarter' ? getQuarterLabel(currentMonth)
               : currentPeriod === 'year' ? getYearLabel(currentMonth)
               : formatMonthLabel(currentMonth)}
-            {currentPeriod === 'month' && <ChevronDown size={12} className={cn("transition-transform", showMonths ? "rotate-180" : "")} />}
+            <ChevronDown size={12} className={cn("transition-transform", showMonths ? "rotate-180" : "")} />
           </button>
 
           <button
@@ -171,12 +170,12 @@ export default function PeriodPicker() {
 
       <AnimatePresence>
         {/* Dropdown MESI */}
-        {showMonths && currentPeriod === 'month' && (
+        {showMonths && (
           <motion.div
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            className="absolute top-24 right-0 z-50 glass bg-[var(--bg-surface)] p-2 rounded-[2rem] border border-[var(--border-default)] shadow-2xl w-64 max-h-[400px] overflow-y-auto custom-scrollbar"
+            className="absolute top-full mt-2 right-0 z-[500] glass bg-[var(--bg-surface)] p-2 rounded-[2rem] border border-[var(--border-default)] shadow-2xl w-64 max-h-[400px] overflow-y-auto custom-scrollbar"
           >
             <div className="p-2 space-y-1">
               <button
@@ -210,7 +209,7 @@ export default function PeriodPicker() {
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            className="absolute top-24 right-0 z-50 glass bg-[var(--bg-surface)] p-4 rounded-[2rem] border border-[var(--border-default)] shadow-2xl w-[90vw] max-w-[400px]"
+            className="absolute top-full mt-2 right-0 z-[500] glass bg-[var(--bg-surface)] p-4 rounded-[2rem] border border-[var(--border-default)] shadow-2xl w-[90vw] max-w-[400px]"
           >
             <div className="flex items-center justify-between mb-4 px-2">
                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--fg-subtle)]">Seleziona Giorno</span>

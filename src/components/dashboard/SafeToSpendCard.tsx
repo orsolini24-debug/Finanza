@@ -65,7 +65,7 @@ export function SafeToSpendCard({ amount, liquidBalance, budgetReserved, upcomin
               isHealthy ? "text-[var(--accent)]" : "text-[var(--expense)]"
             )} 
           />
-          <p className="text-[11px] text-[var(--fg-muted)] font-bold mt-2 max-w-[200px] leading-tight">
+          <p className="text-[11px] text-[var(--fg-muted)] font-bold mt-2 leading-tight">
             Denaro disponibile dopo aver sottratto budget e bollette.
           </p>
         </div>

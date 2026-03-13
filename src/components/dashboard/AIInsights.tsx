@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Sparkles, RefreshCw, X, ArrowRight, ShieldCheck, Brain, TrendingUp, Zap, ChevronRight, Info } from 'lucide-react'
+import { Sparkles, RefreshCw, X, ArrowRight, ShieldCheck, Brain, TrendingUp, Zap, ChevronRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import LottieAnimation from '@/components/ui/LottieAnimation'
@@ -211,6 +211,11 @@ export default function AIInsights({ workspaceId, month }: { workspaceId: string
               <h3 className="text-2xl font-display font-black text-[var(--fg-primary)] mt-1.5 leading-tight">{data.personality.type}</h3>
             </div>
           </div>
+          {data.personality.description && (
+            <p className="text-sm text-[var(--fg-muted)] font-medium leading-relaxed text-left border-l-2 border-[var(--accent)]/40 pl-4">
+              {data.personality.description}
+            </p>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-auto text-left">
             <div className="flex items-start gap-3 p-4 bg-[var(--bg-elevated)]/60 rounded-2xl border border-[var(--border-subtle)]">
               <Zap size={15} className="text-[var(--warning)] shrink-0 mt-0.5" />
@@ -246,9 +251,9 @@ export default function AIInsights({ workspaceId, month }: { workspaceId: string
                 <span className="text-2xl group-hover:scale-110 transition-transform">{insight.icon}</span>
               </div>
               <h4 className="text-[13px] font-black text-[var(--fg-primary)] mb-2 leading-tight uppercase text-left">{insight.title}</h4>
-              <p className="text-[11px] text-[var(--fg-muted)] font-medium leading-relaxed line-clamp-3 flex-1 text-left">{insight.message}</p>
-              <div className="mt-4 flex items-center gap-1 text-[9px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: meta.color }}>
-                Dettagli <ArrowRight size={10} />
+              <p className="text-[11px] text-[var(--fg-muted)] font-medium leading-relaxed line-clamp-4 flex-1 text-left">{insight.message}</p>
+              <div className="mt-4 flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-[var(--fg-subtle)] group-hover:opacity-100 opacity-60 transition-opacity" style={{ color: meta.color }}>
+                Approfondisci <ArrowRight size={10} />
               </div>
             </motion.div>
           )
@@ -322,14 +327,22 @@ export default function AIInsights({ workspaceId, month }: { workspaceId: string
                 <div className="text-8xl mb-8">{selectedInsight.icon}</div>
                 <h3 className="text-3xl sm:text-4xl font-display font-black text-[var(--fg-primary)] leading-none tracking-tighter mb-6">{selectedInsight.title}</h3>
                 <p className="text-lg sm:text-xl text-[var(--fg-muted)] font-medium leading-relaxed mb-10">{selectedInsight.message}</p>
-                <div className="p-6 bg-[var(--bg-elevated)] rounded-[2rem] border border-[var(--border-subtle)] flex items-start gap-4">
-                  <div className="p-3 bg-[var(--accent)] text-[var(--accent-on)] rounded-2xl shadow-xl"><Info size={24} /></div>
-                  <div>
-                    <p className="text-xs font-black text-[var(--fg-primary)] uppercase tracking-widest mb-1">Nota del Ministro</p>
-                    <p className="text-sm text-[var(--fg-muted)] leading-relaxed">Questa raccomandazione è basata su modelli di ottimizzazione matematica e flussi di cassa reali.</p>
+                {selectedInsight.detail && (
+                  <div className="p-6 bg-[var(--bg-elevated)] rounded-[2rem] border border-[var(--border-subtle)] space-y-4">
+                    <p className="text-[10px] font-black text-[var(--fg-subtle)] uppercase tracking-widest">Analisi dettagliata</p>
+                    <p className="text-sm text-[var(--fg-primary)] leading-relaxed font-medium">{selectedInsight.detail}</p>
                   </div>
-                </div>
-                <button onClick={() => setSelectedInsight(null)} className="w-full mt-8 py-5 bg-[var(--fg-primary)] text-[var(--bg-base)] font-black uppercase tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-95 transition-all">Ho Ricevuto l'Ordine</button>
+                )}
+                {selectedInsight.action && (
+                  <div className="p-5 rounded-2xl border-2 border-[var(--accent)]/30 bg-[var(--accent-dim)]/30 flex items-start gap-4">
+                    <div className="p-2.5 bg-[var(--accent)] text-[var(--accent-on)] rounded-xl shadow-lg shrink-0"><Zap size={18} /></div>
+                    <div>
+                      <p className="text-[10px] font-black text-[var(--accent)] uppercase tracking-widest mb-1.5">Azione consigliata</p>
+                      <p className="text-sm font-bold text-[var(--fg-primary)] leading-snug">{selectedInsight.action}</p>
+                    </div>
+                  </div>
+                )}
+                <button onClick={() => setSelectedInsight(null)} className="w-full mt-4 py-5 bg-[var(--fg-primary)] text-[var(--bg-base)] font-black uppercase tracking-widest text-sm rounded-2xl hover:scale-[1.02] active:scale-95 transition-all">Ho capito</button>
               </div>
             </motion.div>
           </div>

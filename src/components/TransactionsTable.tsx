@@ -55,6 +55,10 @@ export default function TransactionsTable({ transactions, categories, accounts, 
   const expenseCategories = categories.filter(c => c.type === 'EXPENSE')
   const bothCategories = categories.filter(c => c.type === 'BOTH')
 
+  useEffect(() => {
+    setSelectedTx([])
+  }, [filterStatus, filterType, filterCategoryId, search])
+
   const filtered = useMemo(() => {
     return transactions.filter(tx => {
       if (search && !tx.description.toLowerCase().includes(search.toLowerCase())) return false

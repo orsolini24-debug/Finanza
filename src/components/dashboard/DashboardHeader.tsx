@@ -51,7 +51,7 @@ export function DashboardHeader({
   const greeting = (() => {
     const h = new Date().getHours()
     if (h < 12) return 'Buongiorno'
-    if (h < 18) return 'Buonasera'
+    if (h < 18) return 'Buon pomeriggio'
     return 'Buonasera'
   })()
 
@@ -74,7 +74,7 @@ export function DashboardHeader({
               {greeting}, <span className="text-[var(--accent)]">{userName}</span>!
             </p>
           </div>
-          <p className="text-xs text-[var(--fg-muted)] font-medium capitalize hidden sm:block">{todayLabel}</p>
+          <p className="text-xs text-[var(--fg-muted)] font-medium capitalize">{todayLabel}</p>
         </div>
       )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">

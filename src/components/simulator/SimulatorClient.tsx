@@ -35,7 +35,7 @@ export default function SimulatorClient({ initialNetWorth, avgMonthlySavings }: 
     tooltip: { trigger: 'axis', formatter: (params: any[]) => `Mese ${params[0].data[0]}: €${params[0].data[1].toLocaleString('it-IT')}` },
     grid: { left: '3%', right: '3%', bottom: '3%', containLabel: true },
     xAxis: { type: 'value', name: 'Mesi', axisLabel: { color: 'var(--fg-subtle)' } },
-    yAxis: { type: 'value', axisLabel: { formatter: (v: number) => '€' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v), color: 'var(--fg-subtle)' } },
+    yAxis: { type: 'value', axisLabel: { formatter: (v: number) => '€' + (v >= 1000 ? (v/1000 % 1 === 0 ? (v/1000).toFixed(0) : (v/1000).toFixed(1)) + 'k' : v), color: 'var(--fg-subtle)' } },
     series: [{
       type: 'line', smooth: true,
       data: projectionData.map(p => [p.month, p.value]),

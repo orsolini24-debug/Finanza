@@ -57,7 +57,7 @@ export default function CashFlowChart({ currentBalance, recurringItems }: CashFl
     },
     yAxis: { 
       type: 'value', 
-      axisLabel: { formatter: (v: number) => '€' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v), color: 'var(--fg-subtle)' },
+      axisLabel: { formatter: (v: number) => '€' + (v >= 1000 ? (v/1000 % 1 === 0 ? (v/1000).toFixed(0) : (v/1000).toFixed(1)) + 'k' : v), color: 'var(--fg-subtle)' },
       splitLine: { lineStyle: { type: 'dashed', color: 'var(--border-subtle)', opacity: 0.6 } },
       min: minBalance - padding,
       max: maxBalance + padding

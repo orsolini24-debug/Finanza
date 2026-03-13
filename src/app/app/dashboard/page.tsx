@@ -203,11 +203,19 @@ export default async function Dashboard({
               <div key={b.id}>
                 <div className="flex justify-between items-end text-sm mb-2">
                   <span className="font-bold text-[var(--fg-primary)] truncate mr-2">{b.category.name}</span>
-                  <span className={cn("text-[11px] font-black shrink-0", b.percentage < 75 ? "text-[var(--income)]" : b.percentage < 100 ? "text-[var(--warning)]" : "text-[var(--expense)]")}>{Math.round(b.percentage)}%</span>
+                  <span className={cn("text-[11px] font-black shrink-0 font-mono", b.percentage < 75 ? "text-[var(--income)]" : b.percentage < 100 ? "text-[var(--warning)]" : "text-[var(--expense)]")}>€{b.spent.toFixed(0)} / €{Number(b.amount).toFixed(0)}</span>
                 </div>
                 <div className="w-full bg-[var(--bg-input)] rounded-full h-1.5 overflow-hidden border border-[var(--border-subtle)]">
-                  <div className={cn("h-full rounded-full transition-all duration-300", b.percentage < 75 ? "bg-[var(--income)]" : b.percentage < 100 ? "bg-[var(--warning)]" : "bg-[var(--expense)]")} style={{ width: `${Math.min(100, b.percentage)}%` }} />
+                  <div
+                    className={cn("h-full rounded-full transition-all duration-300", b.percentage < 75 ? "bg-[var(--income)]" : b.percentage < 100 ? "bg-[var(--warning)]" : "bg-[var(--expense)] animate-pulse")}
+                    style={{ width: `${Math.min(100, b.percentage)}%` }}
+                  />
                 </div>
+                {b.percentage > 100 && (
+                  <p className="text-[9px] font-black text-[var(--expense)] uppercase tracking-widest mt-0.5">
+                    Sforato di €{(b.spent - Number(b.amount)).toFixed(0)}
+                  </p>
+                )}
               </div>
             ))}
             {topBudgets.length === 0 && <p className="text-center text-[var(--fg-muted)] py-10 text-sm italic">Nessun budget configurato</p>}

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import ReactECharts from 'echarts-for-react'
+import dynamic from 'next/dynamic'
+const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
 import { RecurringItem } from '@prisma/client'
 import { projectCashFlow } from '@/lib/cashflow'
 import { cn } from '@/lib/utils'

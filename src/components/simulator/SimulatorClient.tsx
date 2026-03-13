@@ -1,6 +1,7 @@
 'use client'
 import { useState, useMemo } from 'react'
-import ReactECharts from 'echarts-for-react'
+import dynamic from 'next/dynamic'
+const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
 import { cn } from '@/lib/utils'
 import { TrendingUp } from 'lucide-react'
 
